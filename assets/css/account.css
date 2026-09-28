@@ -1,0 +1,56 @@
+/* TrueMile EV web: #/account (views/account.js). Cards come from style.css (.card, .grid-cards, .kv,
+   .btn); these are the Account section's own pieces. */
+
+.account{padding-top:4px}
+/* Narrow: one column in the reading order Profile, Plan, Payments, My data, Session, Delete. Wide: the
+   short cards stacked on the left third, the plan (with its comparison) on the right two thirds. */
+.account-side{display:contents}
+.account-profile{order:1} .account-plan{order:2} .account-payments{order:3} .account-data{order:4}
+.account-session{order:5} .account-danger{order:6}
+@media (min-width:1100px){
+  .account{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .account-side{display:flex;flex-direction:column;gap:16px;min-width:0;order:1}
+  .account .account-plan{grid-column:2 / 4}
+  .account .account-danger{grid-column:1 / -1}
+}
+.account-who{display:flex;align-items:center;gap:14px;margin:0 0 12px;min-width:0}
+.account-avatar{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:1.5rem;font-weight:800;
+  color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.account-who-text{min-width:0}
+.account-name{font-size:1.15rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-who-text .subtitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.account-source{margin:0 0 10px;color:var(--muted)}
+.account-trial b{display:block;margin-bottom:2px}
+.account-trial .note{margin-top:6px}
+.account-h{font-size:.95rem;font-weight:600;margin:16px 0 8px}
+.account-compare{margin-bottom:14px}
+.account-compare td:first-child{white-space:normal;min-width:200px}
+.account-compare th:not(:first-child),.account-compare td:not(:first-child){text-align:center;width:22%}
+.account-compare .account-cur{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.account-yes{color:var(--c-board);font-weight:800}
+.account-no{color:var(--dim)}
+.account-lim{white-space:normal!important;font-size:.86em}
+.account-upgrade{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:4px}
+.account-upgrade .note{margin:0;max-width:70ch}
+.account-manage{margin:10px 0 0}
+
+.account-btns{display:flex;flex-wrap:wrap;gap:8px}
+.account-msg:empty{display:none}
+
+.account-danger{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--alert) 55%,transparent)}
+.account-danger .card-title,.account-danger .card-title .ico{color:var(--alert)}
+.account-danger p{margin-top:0}
+
+.account-delete-dialog p{margin:0 0 12px}
+.account-delete-dialog input{text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+.account-play{display:flex;flex-direction:column;gap:6px}
+.account-play p{margin:0}
+.account-dlg-btns{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;flex-wrap:wrap}
+.account-dlg-msg .msg{margin:12px 0 0}
+.account-delete-dialog .btn.danger:not(:disabled){background:var(--alert);color:#fff}
+.account-delete-dialog .btn.danger:not(:disabled):hover{background:color-mix(in srgb,var(--alert) 85%,#000)}
+
+.account-done{padding:28px 24px}
+.account-done h1{font-size:1.3rem}
+.account-done .btn{margin-top:8px}

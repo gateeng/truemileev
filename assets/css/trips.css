@@ -1,0 +1,128 @@
+/* TrueMile EV web: the Map section's lists and detail pages: the trip list, trip detail, the Journeys
+   tab and journey detail (views/trips.js, trip.js, journeys.js, journey.js). Classes are .trips-*.
+   Tokens and the shared components (.card, .tile, .seg, .btn, .table) come from style.css. */
+
+.trips-view{min-width:0}
+.trips-view h2{margin-top:6px}
+.trips-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.trips-filters>*{min-width:0}
+.trips-filters .trips-year{flex:0 0 auto;width:auto;min-height:40px}
+.trips-toggles{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.trips-searchbox{position:relative;display:flex;align-items:center;flex:1 1 240px;min-width:0;margin:0;
+  text-transform:none;letter-spacing:0}
+.trips-searchbox .ico{position:absolute;left:12px;color:var(--dim);pointer-events:none}
+.trips-searchbox input{width:100%;padding-left:38px;min-height:40px}
+.trips-seg button{min-height:36px}
+.trips-short-btn{min-height:36px}
+.trips-short-btn[hidden]{display:none}
+.trips-more{display:flex;margin:12px auto}
+.trips-lock{margin:0 0 10px}
+.trips-lock .ico{vertical-align:-3px}
+.trips-title,.trips-head{font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 10px}
+.trips-empty{margin:0}
+
+/* Day groups */
+.trips-day{border-radius:var(--r-card);background:var(--card);margin:0 0 10px;overflow:hidden;box-shadow:var(--shadow)}
+.trips-day>summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:2px;padding:12px 16px}
+.trips-day>summary::-webkit-details-marker{display:none}
+.trips-day>summary:hover{background:var(--hover)}
+.trips-day-label{font-weight:700;font-size:.95rem}
+.trips-day-sum{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.trips-day[open]>summary{border-bottom:1px solid var(--line)}
+
+/* One drive */
+.trips-row{display:block;padding:10px 16px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none}
+.trips-row:last-child{border-bottom:0}
+a.trips-row:hover{background:var(--hover);text-decoration:none}
+a.trips-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.trips-short{opacity:.45}
+.trips-cells{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.trips-cell{display:flex;flex-direction:column;min-width:0}
+.trips-cell b{font-size:.95rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.trips-cell span{font-size:.66rem;letter-spacing:.06em;color:var(--dim);text-transform:uppercase}
+.trips-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center}
+.trips-pills:empty{display:none}
+.trips-pill-amber{background:color-mix(in srgb,var(--caution) 18%,transparent);color:var(--caution)}
+.trips-pill-type{letter-spacing:.04em}
+.trips-pill-auto{opacity:.6}
+.trips-veh{font-size:.75rem;color:var(--muted)}
+
+/* Table */
+.trips-table th,.trips-table td{font-size:.86rem}
+.trips-table .trips-left{text-align:left}
+.trips-sort{border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;padding:0;font-weight:700;min-height:0}
+.trips-sort:hover{color:var(--ink);background:none}
+
+/* Trip detail */
+.trips-back{margin:0 0 10px;font-weight:600}
+.trips-detail-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.trips-detail-title{flex:1;min-width:0;text-align:center}
+.trips-detail-title h2{margin:0 0 2px;color:var(--ink);letter-spacing:.01em;text-transform:none;font-size:1.15rem;font-weight:800}
+.trips-detail-title .trips-pills{justify-content:center}
+.trips-arrow{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--card);text-decoration:none;font-size:1rem}
+.trips-arrow:hover{background:var(--hover);text-decoration:none}
+.trips-arrow-off{opacity:.25}
+.trips-sub{font-size:.82rem;color:var(--muted)}
+.trips-jtitle{color:var(--ink);text-transform:none;letter-spacing:.01em;font-size:1.25rem;font-weight:800;margin-bottom:2px;overflow-wrap:anywhere}
+.trips-amber{color:var(--caution)}
+.trips-small{font-size:.8rem}
+.trips-card{margin:0 0 14px}
+.trips-card>summary{cursor:pointer;list-style:none}
+.trips-card>summary::-webkit-details-marker{display:none}
+.trips-h3{font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.trips-summary{letter-spacing:0;font-weight:400;text-transform:none;margin-left:6px}
+.trips-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;margin-top:8px}
+.trips-stat{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted var(--line);padding:6px 0;min-width:0}
+.trips-stat-k{font-size:.84rem;color:var(--muted)}
+.trips-stat-v{font-size:.95rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.trips-odo{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;
+  border-radius:10px;background:var(--card2);font-variant-numeric:tabular-nums}
+.trips-odo div{display:flex;flex-direction:column}
+.trips-line{display:flex;justify-content:space-between;gap:10px;font-size:.88rem;padding:3px 0}
+.trips-kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
+.trips-kv dt{color:var(--muted);font-size:.86rem}
+.trips-kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.trips-note{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 8px;padding:8px 10px;border-radius:10px;background:var(--card2)}
+.trips-route svg,.trips-charts svg{margin:4px 0}
+
+/* the route card: title + "Colour by", the map (or SVG), its legend */
+.trips-routehead{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 12px}
+.trips-routehead .trips-h3{margin:0}
+.trips-colorby{margin-left:auto;align-items:center}
+.trips-colorby[hidden]{display:none}
+.trips-colorby-k{font-size:.8rem;color:var(--muted);margin-right:2px}
+.trips-legend{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:10px 0 0;font-size:.82rem}
+.trips-legend[hidden]{display:none}
+.trips-legend-k{color:var(--muted);flex-basis:100%}
+.trips-legend-v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.trips-legend-bar{flex:1 1 120px;max-width:320px;height:8px;border-radius:4px}
+.trips-routenote:empty{display:none}
+.trips-print-only{display:none}
+.trips-pop-title{font-weight:800;margin:0 0 2px}
+.trips-pop div{margin:0 0 4px}
+
+/* Journeys */
+.trips-jgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.trips-jcard{display:block;color:var(--ink);text-decoration:none}
+.trips-jcard:hover{text-decoration:none;background:color-mix(in srgb,var(--card) 92%,var(--ink))}
+.trips-jcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.trips-jname{font-weight:800;font-size:1.02rem;overflow-wrap:anywhere}
+.trips-jrange{font-size:.85rem;color:var(--c-map);font-weight:600}
+.trips-jcard .trips-cells{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:10px}
+.trips-jtiles{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin:12px 0}
+.trips-actions{margin:6px 0 14px}
+.trips-btn .ico{flex:none}
+
+@media (max-width:640px){
+  .trips-cells{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .trips-jcard .trips-cells{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .trips-stats{grid-template-columns:minmax(0,1fr)}
+  .trips-row,.trips-day>summary{padding-left:12px;padding-right:12px}
+  .trips-colorby{margin-left:0}
+}
+
+/* paper: the SVG route stands in for the screen map */
+@media print{
+  .trips-print-only{display:block}
+  .trips-colorby,.trips-legend,.trips-toggles{display:none!important}
+}

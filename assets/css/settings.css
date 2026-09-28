@@ -1,0 +1,41 @@
+/* TrueMile EV web: #/settings (views/settings.js). The app's settings row: a 22 px icon in the accent,
+   a 600-weight title, a muted subtitle, the control on the right. */
+
+.settings{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:16px;align-items:start;padding-top:4px}
+.settings-sec{display:flex;flex-direction:column}
+.settings-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);min-width:0;flex-wrap:wrap}
+.settings-sec > .settings-row:last-of-type{border-bottom:0}
+.settings-ico{color:var(--accent);flex:none;display:grid;place-items:center;width:28px}
+.settings-text{flex:1 1 200px;min-width:0}
+.settings-title{font-weight:600;font-size:.95rem}
+.settings-sub{color:var(--muted);font-size:.8rem;line-height:1.4}
+.settings-ctl{flex:0 1 auto;display:flex;justify-content:flex-end;min-width:0;max-width:100%}
+.settings-select{width:auto;max-width:100%;min-height:40px;padding:6px 10px}
+.settings-val{color:var(--muted);font-size:.9rem}
+.settings-seg{justify-content:flex-end}
+.settings-switch{width:20px;height:20px;cursor:pointer}
+.settings-done{color:var(--c-board);font-size:.86rem;min-height:1.2em;padding-top:6px}
+.settings-done:empty{min-height:0;padding:0}
+
+.settings-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.settings-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:0 8px;border-radius:var(--r-chip);flex-wrap:wrap}
+.settings-list li:hover{background:var(--hover)}
+.settings-list a,.settings-vstatic{display:inline-flex;align-items:center;gap:10px;color:var(--ink);font-weight:600;min-width:0}
+.settings-list a .ico{color:var(--c-garage)}
+.settings-vstatic .ico{color:var(--dim)}
+.settings-vname{overflow:hidden;text-overflow:ellipsis}
+.settings-vcount{color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
+
+.settings-h{font-size:.9rem;font-weight:600;margin:16px 0 6px}
+.settings-notices{margin:0 0 10px;padding-left:18px;color:var(--muted);font-size:.88rem}
+.settings-notices li{margin:2px 0}
+.settings-signout{margin-top:8px;align-self:flex-start}
+.settings .kv{margin-bottom:8px}
+
+.settings-confirm p{margin:0 0 14px}
+.settings-confirm-btns{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+@media (max-width:560px){
+  .settings-ctl{flex-basis:100%;justify-content:flex-start}
+  .settings-seg{justify-content:flex-start}
+}

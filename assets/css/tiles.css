@@ -1,0 +1,88 @@
+/* TrueMile EV web: the section tile grid (views/tilegrid.js: tiles, vs avg row, tile picker) and the
+   three shared controls every section uses (rangebar, typefilter, carfilter). Tokens come from
+   style.css; the tile itself is the app's ReportTile (radius 10, card fill, no border, value 900 in the
+   metric colour, label in --dim). */
+
+/* ── Range control ─────────────────────────────────────────────────────────────────────────── */
+.rangebar{display:flex;flex-direction:column;gap:8px;min-width:0}
+.rangebar-seg{display:flex;flex-wrap:wrap;gap:6px}
+.rangebar-seg button,.carfilter button{padding:6px 12px;font-size:.84em;border-radius:999px;font-weight:600;
+  background:var(--card);border:1px solid transparent;color:var(--muted);min-height:34px}
+.rangebar-seg button:hover,.carfilter button:hover{color:var(--ink);background:var(--hover)}
+.rangebar-seg button.on,.carfilter button.on{color:var(--c-report);border-color:transparent;font-weight:700;
+  background:color-mix(in srgb,var(--c-report) 15%,transparent)}
+.rangebar-step{display:flex;align-items:center;gap:10px}
+.rangebar-arrow{width:36px;height:36px;padding:0;display:inline-grid;place-items:center;border-radius:999px;background:var(--card);
+  line-height:1;font-size:.8rem;color:var(--muted)}
+.rangebar-arrow:hover{color:var(--ink)}
+.rangebar-label{font-weight:800;font-size:1.05rem;min-width:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.rangebar-custom{display:flex;gap:10px;flex-wrap:wrap}
+.rangebar-date{display:flex;flex-direction:column;gap:4px;margin:0;flex:1 1 140px;min-width:0;
+  text-transform:none;letter-spacing:0;font-size:.85em}
+.rangebar-date input{width:100%}
+
+/* ── Type filter ───────────────────────────────────────────────────────────────────────────── */
+.typefilter{position:relative;display:inline-block;max-width:100%}
+.typefilter-btn{padding:6px 12px;font-size:.86em;border-radius:999px;max-width:100%;overflow:hidden;min-height:34px;
+  text-overflow:ellipsis;white-space:nowrap;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+.typefilter-btn:hover{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.typefilter-btn.on{box-shadow:inset 0 0 0 1px var(--accent)}
+.typefilter-lock{margin-top:4px}
+.typefilter-menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:220px;max-width:min(320px,calc(100vw - 32px));
+  background:var(--card2);border-radius:12px;padding:8px;box-shadow:var(--pop-shadow);max-height:60vh;overflow:auto}
+.typefilter-item{display:flex;align-items:center;gap:8px;margin:0;padding:6px 6px;border-radius:8px;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-size:.92em;color:var(--ink);font-weight:500}
+.typefilter-item:hover{background:var(--hover)}
+.typefilter-item input{width:auto;margin:0}
+.typefilter-actions{display:flex;justify-content:space-between;gap:8px;padding:8px 4px 2px}
+.typefilter-actions button{padding:5px 10px;font-size:.85em}
+
+/* ── Car filter ────────────────────────────────────────────────────────────────────────────── */
+.carfilter{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ── Tile grid ─────────────────────────────────────────────────────────────────────────────── */
+.tilegrid{display:flex;flex-direction:column;gap:10px;min-width:0}
+.tilegrid-vsrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:28px}
+.tilegrid-vsrow[hidden]{display:none}
+.tilegrid-caption{flex:1 1 auto;min-width:0;font-size:.78em;color:var(--dim);line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tilegrid-switch{display:flex;align-items:center;gap:8px;margin:0;flex:none;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-size:.86em;color:var(--ink);font-weight:600}
+.tilegrid-switch input{width:auto;margin:0;accent-color:var(--accent)}
+
+.tilegrid-grid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:clamp(6px,1.4vw,12px);
+  outline:none;border-radius:14px}
+.tilegrid-grid:focus-visible{box-shadow:0 0 0 2px var(--accent)}
+.tilegrid-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:84px;
+  padding:clamp(8px,1.6vw,16px) 4px;border-radius:var(--r-tile);background:var(--card);border:0;box-shadow:var(--shadow);
+  text-align:center;font-weight:400;letter-spacing:0;color:var(--ink)}
+.tilegrid-tile:hover{background:color-mix(in srgb,var(--card) 92%,var(--ink))}
+.tilegrid-v{font-weight:900;font-size:clamp(1rem,3.4vw,1.5rem);line-height:1.15;max-width:100%;overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums}
+.tilegrid-k{font-size:clamp(.64rem,2vw,.74rem);color:var(--dim);font-weight:500;letter-spacing:.03em;line-height:1.2;
+  display:flex;align-items:center;gap:4px;justify-content:center}
+.tilegrid-k .ico{width:12px;height:12px}
+.tilegrid-cmp{font-size:clamp(.6rem,1.8vw,.72rem);color:var(--dim);line-height:1.25;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tilegrid-tile.locked .tilegrid-v{color:var(--dim)!important}
+.tilegrid-better{color:var(--better)}
+.tilegrid-worse{color:var(--worse)}
+.tilegrid-neutral{color:var(--muted)}
+
+/* The tile picker, inside the shared .dialog */
+.tilegrid-picker{display:flex;flex-direction:column;gap:2px;max-height:65vh;overflow:auto}
+.tilegrid-pick{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:0;
+  border-radius:8px;padding:8px 10px;font-weight:400;width:100%;background:transparent}
+.tilegrid-pick:hover,.tilegrid-pick:focus-visible{background:var(--hover)}
+.tilegrid-pick.on .tilegrid-pick-label{font-weight:800}
+.tilegrid-pick-main{display:flex;flex-wrap:wrap;align-items:baseline;min-width:0}
+.tilegrid-pick-mark{font-size:.75em;color:var(--muted);margin-left:2px}
+.tilegrid-pick.on .tilegrid-pick-mark{color:var(--accent)}
+.tilegrid-pick-blurb{flex-basis:100%;font-size:.78em;color:var(--muted)}
+.tilegrid-pick-val{font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tilegrid-pick-group{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:10px 10px 4px}
+
+@media (max-width:520px){
+  .rangebar-seg button,.carfilter button{padding:5px 9px;font-size:.8em}
+  .tilegrid-tile{min-height:72px}
+}

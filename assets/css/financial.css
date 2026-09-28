@@ -1,0 +1,63 @@
+/* TrueMile EV web | the Financial section (#/financial) and the Board card Charge reuses. Only .financial-* classes. */
+
+.financial-view{min-width:0;display:flex;flex-direction:column;gap:16px}
+.financial-view > *{min-width:0}
+.financial-controls{display:flex;flex-direction:column;gap:12px}
+
+/* Board card (all time) */
+.financial-board .card-head{justify-content:flex-start}
+.financial-bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.financial-bitem{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;
+  background:var(--card2);border-radius:var(--r-tile,10px);padding:14px 8px;min-width:0}
+.financial-bitem.skel{align-items:stretch}
+.financial-bv{font-size:1.4rem;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.financial-bk{font-size:.74rem;font-weight:500;color:var(--dim);letter-spacing:.03em}
+.financial-block{font-size:.72rem;color:var(--muted)}
+.financial-bitem.locked .financial-bv{color:var(--dim)}
+.financial-bload{margin:4px 0 8px}
+
+/* Tables (spend by network, by month) */
+.financial-table th,.financial-table td{white-space:nowrap;text-align:right}
+.financial-table .financial-left{text-align:left}
+.financial-netrow[data-href]{cursor:pointer}
+.financial-netrow[data-href]:hover td{background:var(--hover)}
+.financial-total td{font-weight:800;border-top:2px solid var(--line)}
+.financial-networks .scroll,.financial-months .scroll{box-shadow:none}
+.financial-monthbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;min-height:32px}
+.financial-monthbtn:hover{text-decoration:underline}
+
+/* Memberships */
+.financial-members .card-head{justify-content:space-between}
+.financial-madd{margin-left:auto}
+.financial-demo{color:var(--caution)}
+.financial-mlist{display:flex;flex-direction:column;gap:12px;margin:12px 0}
+.financial-mrow{background:var(--card2);border-radius:var(--r-tile,10px);padding:12px 14px;min-width:0}
+.financial-mhead{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+.financial-mhead > div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.financial-mhead .note{overflow-wrap:anywhere}
+.financial-mbtns{display:flex;gap:2px;flex:none}
+.financial-mfig{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px 12px;margin-top:10px}
+.financial-mfig span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.financial-mfig b{font-size:1.02rem;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.financial-mfig small{font-size:.72rem;color:var(--dim);overflow-wrap:anywhere}
+.financial-mtotal{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:4px 0;padding:10px 0 0;
+  border-top:1px solid var(--line);font-weight:600}
+.financial-mtotal b{font-size:1.1rem;font-variant-numeric:tabular-nums}
+
+/* The membership form (inside the sheet) */
+.financial-mform{display:flex;flex-direction:column;gap:4px}
+.financial-field{display:flex;flex-direction:column;gap:6px;margin:8px 0 0}
+.financial-field[hidden]{display:none}
+.financial-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.financial-merr[hidden]{display:none}
+.financial-mcancel{align-self:flex-start;margin-top:12px}
+.financial-confirm p{margin:0 0 14px}
+.financial-confirm-btns{display:flex;justify-content:flex-end;gap:10px}
+
+/* Fuel comparison */
+.financial-fuel .kv{margin-bottom:8px}
+
+@media (max-width:560px){
+  .financial-bv{font-size:1.2rem}
+  .financial-row2{grid-template-columns:1fr}
+}

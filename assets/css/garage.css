@@ -1,0 +1,79 @@
+/* TrueMile EV web: #/garage (views/garage.js). The tab strip is style.css's .subtabs in the garage
+   colour; these are the Garage section's own pieces. */
+
+.garage{padding-top:4px}
+.garage-title{font-size:1.15rem;font-weight:800;margin:0 0 8px}
+.garage-chart{margin:8px 0}
+.garage-chart svg:not(.ico){width:100%;height:auto;display:block}
+.garage-soh{margin:0 0 4px;font-variant-numeric:tabular-nums}
+.garage-soh b{font-weight:600;color:var(--muted)}
+.garage-good{color:var(--m-cost)}
+.garage-caution{color:var(--caution)}
+
+.garage-photo{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px}
+.garage-photo .ico{color:var(--c-garage);margin-top:2px}
+.garage-photo p{margin:0}
+
+.garage-rec{margin:0 0 10px;color:var(--muted);font-size:.88rem}
+.garage-tires{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.garage-tire{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr) auto;gap:4px 12px;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--line)}
+.garage-tire:last-child{border-bottom:0}
+.garage-tire-pos{font-size:.76rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c-garage)}
+.garage-tire-main{min-width:0}
+.garage-tire-note{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.8rem;margin-top:2px}
+.garage-tire-mi{text-align:right;display:flex;flex-direction:column;line-height:1.2}
+.garage-tire-mi b{font-weight:800;font-variant-numeric:tabular-nums}
+.garage-tire-mi span{font-size:.72rem;color:var(--dim)}
+.garage-removed{background:var(--card2);box-shadow:none;margin-top:10px;padding:10px 14px}
+.garage-removed .card-head{margin-bottom:0}
+.garage-removed.open .card-head{margin-bottom:8px}
+
+.garage-trailers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.garage-trailer{padding:0 0 12px;border-bottom:1px solid var(--line)}
+.garage-trailer:last-child{border-bottom:0;padding-bottom:0}
+.garage-trailer .kv{margin-top:6px}
+.garage-sub-h{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+
+
+.garage-triplist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.garage-trip{padding:8px 0;border-bottom:1px solid var(--line)}
+
+.garage-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:8px}
+.garage-bitem{background:var(--card2);border-radius:var(--r-tile);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.garage-bv{font-weight:900;font-size:1.1rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.garage-bk{font-size:.74rem;color:var(--dim)}
+
+.garage-stats{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.garage-stats > div{flex:1 1 120px;background:var(--card2);border-radius:var(--r-tile);padding:10px 12px;display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:2px;min-width:0}
+.garage-stats b{font-weight:900;font-size:1.15rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.garage-stats span{font-size:.74rem;color:var(--dim)}
+
+.garage-bands{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.garage-bands li{display:grid;grid-template-columns:minmax(64px,.9fr) minmax(0,1.6fr) minmax(0,1.2fr);gap:10px;align-items:center;font-size:.86rem}
+.garage-band-bar{height:8px;border-radius:4px;background:var(--card2);overflow:hidden;display:block}
+.garage-band-bar i{display:block;height:100%;background:var(--m-efficiency);border-radius:4px}
+.garage-band-v{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.garage-scans{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.garage-scan{border-bottom:1px solid var(--line)}
+.garage-scan:last-child{border-bottom:0}
+.garage-scan-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;min-height:44px}
+details > summary.garage-scan-head{cursor:pointer;list-style:none}
+details > summary.garage-scan-head::-webkit-details-marker{display:none}
+details > summary.garage-scan-head::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--dim);
+  border-bottom:2px solid var(--dim);transform:rotate(45deg);transition:transform .15s}
+details[open] > summary.garage-scan-head::after{transform:rotate(-135deg)}
+.garage-scan-date{font-weight:600}
+.garage-codes{list-style:none;margin:0 0 12px;padding:0 0 0 4px;display:flex;flex-direction:column;gap:8px}
+.garage-codes li{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.garage-codes b{font-family:ui-monospace,Consolas,monospace}
+.garage-code-desc{color:var(--muted);flex:1 1 200px}
+
+@media (max-width:560px){
+  .garage-tire{grid-template-columns:minmax(0,1fr) auto}
+  .garage-tire-pos{grid-column:1 / -1}
+  .garage-bands li{grid-template-columns:minmax(56px,.8fr) minmax(0,1fr);}
+  .garage-band-v{grid-column:1 / -1}
+}

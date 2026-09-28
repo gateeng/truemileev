@@ -1,0 +1,116 @@
+/* TrueMile EV web | the Charge section (#/charge) and a charge session (#/charge/<id>). Only .charges-* classes. */
+
+.charges-view{min-width:0;display:flex;flex-direction:column;gap:16px}
+.charges-view > *{min-width:0}
+
+/* Controls: the period bar, then Filter · search · view, then the active-filter chips */
+.charges-controls{display:flex;flex-direction:column;gap:12px}
+.charges-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.charges-tools .charges-search{flex:1 1 220px;width:auto;min-width:0}
+.charges-filterbtn{max-width:min(100%,360px)}
+.charges-filterbtn .count[hidden]{display:none}
+.charges-chips{display:flex;flex-wrap:wrap;gap:6px}
+.charges-chips:empty{display:none}
+.charges-chip{cursor:pointer;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-weight:600}
+.charges-chip:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.charges-small{font-size:.8em}
+
+/* Map card */
+.charges-mapcard .card-head{justify-content:space-between}
+.charges-switch{display:inline-flex;align-items:center;gap:8px;margin:0 0 0 auto;text-transform:none;letter-spacing:0;
+  font-size:.86rem;font-weight:500;color:var(--muted);cursor:pointer}
+.charges-switch input{margin:0}
+.charges-map{min-height:60px}
+.charges-mapempty{margin:8px 0}
+.charges-mapnote{margin:8px 0 0}
+.charges-mapnote:empty{display:none}
+.charges-pop{display:flex;flex-direction:column;gap:4px;min-width:200px;font-size:.86rem}
+.charges-pop-title{font-size:.95rem}
+.charges-pop-sub{color:var(--muted);font-size:.8rem}
+.charges-pop-h{margin:6px 0 2px;font-size:.66rem;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+.charges-pop-lock{display:flex;align-items:center;gap:6px;margin:6px 0 0;color:var(--muted)}
+.charges-pop-table{font-size:.8rem;width:100%}
+.charges-pop-table th,.charges-pop-table td{padding:3px 4px;text-align:right;border-bottom:1px solid var(--line)}
+.charges-pop-table th:first-child,.charges-pop-table td:first-child{text-align:left}
+.charges-pop-more{margin-top:6px;align-self:flex-start;padding:4px 10px;font-size:.8rem;border-radius:8px;background:transparent;
+  border:1px solid var(--line);color:var(--accent);cursor:pointer}
+
+/* List */
+.charges-listhead{justify-content:space-between}
+.charges-hidden{text-transform:none;letter-spacing:0;font-weight:500}
+.charges-panel{margin:0 -4px}
+.charges-row{display:grid;grid-template-columns:56px minmax(0,1fr) 84px 72px;gap:8px;align-items:center;min-height:44px;
+  padding:8px 4px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:.92em;border-radius:6px}
+a.charges-row:hover{text-decoration:none;background:var(--hover)}
+a.charges-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.charges-panel>.charges-row:last-child,.charges-panel>details:last-child{border-bottom:0}
+.charges-indent .charges-date{padding-left:12px}
+.charges-date{color:var(--m-distance,var(--ink));font-variant-numeric:tabular-nums}
+.charges-net{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.charges-kwh{color:var(--m-charging);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.charges-cost{color:var(--m-cost);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.charges-edit{font-size:.85em}
+.charges-veh{display:block;font-size:.78em}
+.charges-unconf{background:color-mix(in srgb,var(--muted) 16%,transparent);color:var(--muted);font-size:.66em;letter-spacing:.5px}
+.charges-group{border-bottom:1px solid var(--line)}
+.charges-group>summary{cursor:pointer;list-style:none}
+.charges-group>summary::-webkit-details-marker{display:none}
+.charges-group[open]>summary{border-bottom:1px dashed var(--line)}
+.charges-home>summary{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:10px 4px;min-height:44px;align-items:center}
+.charges-home-label{font-weight:800;color:var(--c-board)}
+.charges-stop{border-bottom:0}
+.charges-group .charges-row:last-child{border-bottom:0}
+.charges-more{display:flex;margin:12px auto 0}
+.charges-locked{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
+.charges-locked .note{margin:4px 0}
+
+/* Table */
+.charges-table th,.charges-table td{font-size:.86em;white-space:nowrap}
+.charges-table .charges-left{text-align:left}
+.charges-sort{border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;padding:0;font-weight:700;cursor:pointer}
+
+/* Filter sheet */
+.charges-sheet{display:flex;flex-direction:column;gap:14px}
+.charges-fs{border:0;margin:0;padding:0;min-width:0}
+.charges-fs legend{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;padding:0}
+.charges-opt{display:flex;align-items:center;gap:10px;margin:0;padding:8px 2px;min-height:40px;text-transform:none;letter-spacing:0;
+  font-size:.95rem;font-weight:500;color:var(--ink);cursor:pointer;border-bottom:1px dotted var(--line)}
+.charges-opt input{margin:0}
+.charges-opt span:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.charges-optn{color:var(--muted);font-size:.84rem;font-variant-numeric:tabular-nums}
+
+/* Learned curve */
+.charges-curve-stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9em;margin:8px 0}
+.charges-bands{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.charges-curve-body svg:not(.ico),.charges-session-curve svg:not(.ico){width:100%;height:auto}
+
+/* Detail */
+.charges-back{margin:0}
+.charges-back a{display:inline-flex;align-items:center;gap:2px;min-height:44px;font-weight:600}
+.charges-detail-head h2{margin:0;color:var(--ink);font-size:1.3rem;letter-spacing:.5px;text-transform:none;white-space:pre}
+.charges-sub{color:var(--muted)}
+.charges-card{margin:0}
+.charges-statrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.charges-statrow:last-of-type{border-bottom:0}
+.charges-stat{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;gap:2px}
+.charges-stat b{font-size:1.05rem;font-weight:800;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.charges-stat span{font-size:.66rem;letter-spacing:.06em;color:var(--dim);font-weight:600}
+.charges-merge{margin:8px 0}
+.charges-notes{margin:10px 0}
+.charges-notes p{white-space:pre-wrap;overflow-wrap:anywhere;margin:2px 0}
+.charges-k{font-size:.66em;letter-spacing:.5px;color:var(--muted)}
+.charges-card .note .ico{vertical-align:-2px}
+.charges-curve-ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:8px}
+.charges-inline{display:flex;align-items:center;gap:6px;margin:0;text-transform:none;letter-spacing:0;font-size:.9em;color:var(--ink)}
+.charges-inline select{width:auto;padding:5px 8px}
+.charges-ys{display:flex;flex-wrap:wrap;gap:4px 12px}
+.charges-check{display:inline-flex;align-items:center;gap:4px;margin:0;text-transform:none;letter-spacing:0;font-size:.88em;color:var(--ink)}
+.charges-check input{width:auto;margin:0}
+.charges-check input:disabled+span{opacity:.4}
+.charges-spot{border-radius:var(--r-card,12px);overflow:hidden}
+
+@media (max-width:640px){
+  .charges-row{grid-template-columns:46px minmax(0,1fr) 70px 60px;gap:6px;font-size:.88em}
+  .charges-tools .charges-search{flex-basis:100%}
+  .charges-switch{margin-left:0}
+}

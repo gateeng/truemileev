@@ -1,0 +1,90 @@
+/* TrueMile EV web: the screen maps (views/mapview.js, MapLibre on OpenFreeMap tiles) and the Map section
+   (views/map_section.js). Classes are .mapview-* and .map-*. maplibre-gl.css itself is added by
+   mapview.js on the first map; the rules here only theme it. Maps never print. */
+
+/* ── MapLibre on the dark page theme ──────────────────────────────────────────────────────── */
+:root[data-theme="dark"] .maplibregl-ctrl-group,
+:root[data-theme="dark"] .maplibregl-ctrl-attrib{background:var(--card);color:var(--muted)}
+:root[data-theme="dark"] .maplibregl-ctrl-attrib a{color:var(--muted)}
+:root[data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon{filter:invert(1)}
+:root[data-theme="dark"] .maplibregl-popup-content{background:var(--card);color:var(--ink)}
+:root[data-theme="dark"] .maplibregl-popup-tip{border-top-color:var(--card)}
+:root[data-theme="dark"] .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+:root[data-theme="dark"] .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+:root[data-theme="dark"] .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:var(--card)}
+:root[data-theme="dark"] .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+:root[data-theme="dark"] .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+:root[data-theme="dark"] .maplibregl-popup-anchor-top-right .maplibregl-popup-tip{border-bottom-color:var(--card)}
+:root[data-theme="dark"] .maplibregl-popup-anchor-left .maplibregl-popup-tip{border-right-color:var(--card)}
+:root[data-theme="dark"] .maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:var(--card)}
+:root[data-theme="dark"] .maplibregl-popup-close-button{color:var(--muted)}
+
+/* ── the map box ──────────────────────────────────────────────────────────────────────────── */
+.mapview{position:relative;width:100%;border-radius:12px;overflow:hidden;background:var(--card2);isolation:isolate}
+.mapview.mapview-off{height:auto!important;min-height:0;display:flex;align-items:center;justify-content:center;padding:28px 16px}
+.mapview-msg{margin:0;text-align:center}
+.mapview-notiles{position:absolute;left:8px;bottom:8px;z-index:2;margin:0;padding:3px 8px;border-radius:8px;
+  background:color-mix(in srgb,var(--card) 88%,transparent);font-size:.76rem;pointer-events:none}
+.mapview .maplibregl-canvas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.mapview .maplibregl-popup-content{border-radius:10px;padding:10px 30px 10px 12px;font:inherit;font-size:.86rem;line-height:1.4;
+  box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.mapview .maplibregl-popup-content a{color:var(--accent);font-weight:700}
+.mapview .maplibregl-popup-close-button{font-size:18px;width:28px;height:28px;border:0;background:transparent;right:2px;top:2px}
+
+/* start / end / rest markers (the app's bitmaps as inline SVG) */
+.mapview-marker{line-height:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));pointer-events:none}
+.mapview-marker svg{display:block}
+
+/* ── the Map section ─────────────────────────────────────────────────────────────────────── */
+.map-section{display:flex;flex-direction:column;gap:16px;min-width:0}
+.map-controls{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;min-width:0}
+.map-range{flex:1 1 420px;min-width:0}
+.map-filterbtn{flex:0 0 auto}
+.map-filterbtn .map-fb-value{max-width:14ch}
+.map-filterbtn .map-fb-count[hidden]{display:none}
+.map-scope{margin:-6px 0 0}
+.map-carlines:empty{display:none}
+.map-carlines p{margin:2px 0}
+.map-carhead{font-weight:700;font-size:.9rem}
+.map-tabs{--c:var(--c-map);margin:6px 0 0}
+.map-tabs .map-tab-lock{color:var(--dim)}
+.map-tabbody{min-width:0}
+
+/* routes in this period */
+.map-routes .card-head{gap:10px}
+.map-routes-sum{margin-left:auto;color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
+.map-routes .card-chev{margin-left:0}
+.map-routes-intro{margin:0 0 10px}
+.map-routes-actions{margin:0 0 12px}
+.map-routes-map:empty{display:none}
+.map-routes-note{margin:8px 0 0}
+.map-routes-note:empty{display:none}
+.map-pop-title{font-weight:800;margin:0 0 2px}
+.map-pop div{margin:0 0 4px}
+
+/* the Filter sheet */
+.map-sheet{display:flex;flex-direction:column;gap:16px}
+.map-fs{border:0;margin:0;padding:0;min-width:0}
+.map-fs legend{padding:0;margin:0 0 8px;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.map-fs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
+.map-check{display:flex;align-items:center;gap:10px;min-height:40px;margin:0;font-size:.95rem;cursor:pointer;
+  text-transform:none;letter-spacing:0;color:var(--ink)}
+.map-check input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--accent)}
+.map-check input:disabled + span{color:var(--dim)}
+.map-lock{margin:0 0 8px}
+.map-hint{margin:6px 0 0;font-size:.8rem}
+.map-hint:empty{display:none}
+.map-dist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.map-dist label{display:flex;flex-direction:column;gap:4px;margin:0;font-size:.82rem;color:var(--muted);text-transform:none;letter-spacing:0}
+.map-dist input{width:100%}
+.map-dist-msg{color:var(--alert)}
+
+@media (max-width:767.98px){
+  .map-range{flex-basis:100%}
+  .map-fs-grid{grid-template-columns:minmax(0,1fr)}
+}
+
+/* ── paper: a WebGL canvas prints blank and charge locations never print ───────────────────── */
+@media print{
+  .mapview,.maplibregl-map,.map-routes{display:none!important}
+}

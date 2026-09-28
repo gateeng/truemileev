@@ -1,98 +1,77 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TrueMile EV — your dashboard</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://fsnmjxtthahperapdihw.supabase.co https://tiles.openfreemap.org; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="dark light">
 <meta name="robots" content="noindex">
+<title>TrueMile EV — your dashboard</title>
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M10 12 h18 a20 20 0 0 1 0 40 h-18 z" fill="%231e88d2"/><circle cx="52" cy="32" r="6" fill="%2300e676"/></svg>'>
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/css/tiles.css?v=3">
+<link rel="stylesheet" href="assets/css/account.css?v=3">
+<link rel="stylesheet" href="assets/css/garage.css?v=3">
+<link rel="stylesheet" href="assets/css/settings.css?v=3">
+<link rel="stylesheet" href="assets/css/financial.css?v=3">
+<link rel="stylesheet" href="assets/css/charges.css?v=3">
+<link rel="stylesheet" href="assets/css/charts.css?v=3">
+<link rel="stylesheet" href="assets/css/trips.css?v=3">
+<link rel="stylesheet" href="assets/css/map.css?v=3">
+<link rel="stylesheet" href="assets/css/report.css?v=3">
+<link rel="stylesheet" href="assets/css/print.css?v=3">
+<script src="assets/config.js?v=3"></script>
 </head><body>
-<div class="wrap">
+<div class="shell" id="shell">
 
-  <div class="topbar">
-    <div class="brand">TrueMile <span>EV</span></div>
-    <div class="spacer"></div>
-    <div id="who" class="who"></div>
-    <select id="vehiclePicker" class="hide" style="width:auto"></select>
-    <button id="refreshBtn" class="hide">Refresh</button>
-    <button id="signOutBtn" class="hide">Sign out</button>
-  </div>
+  <aside id="sidebar" class="sidebar hide" aria-label="Sections"></aside>
+  <div class="scrim hide" id="scrim"></div>
 
-  <!-- ── not configured ─────────────────────────────────────────────────────────────────── -->
-  <div id="unconfigured" class="panel narrow hide">
-    <h2>One value missing</h2>
-    <p class="note">This page needs the project's public anon key before it can talk to anything.
-    Paste it into <code>assets/config.js</code> — Supabase dashboard → Project Settings → API →
-    Project API keys → <b>anon / public</b>. Never the service_role key: that one ignores row-level
-    security and this file is served to every visitor.</p>
-  </div>
+  <div class="main">
+    <header class="topbar" id="topbar">
+      <div class="tb-left" id="tbLeft">
+        <a class="tb-brand" href="index.html">TrueMile <b>EV</b></a>
+      </div>
+      <div class="tb-right" id="tbRight"></div>
+    </header>
 
-  <!-- ── sign in ────────────────────────────────────────────────────────────────────────── -->
-  <div id="signIn" class="panel narrow hide">
-    <h2>Sign in</h2>
-    <p class="sub">The same account you use in the app. You see your own data and nothing else.</p>
-    <button id="googleBtn" class="primary" style="width:100%">Continue with Google</button>
-    <p class="note" style="text-align:center;margin:14px 0 0">or</p>
-    <label for="email">Email</label>
-    <input id="email" type="email" autocomplete="username" placeholder="you@example.com">
-    <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password">
-    <button id="emailBtn" style="width:100%;margin-top:14px">Sign in with email</button>
-    <div id="signInMsg"></div>
-    <p class="note" style="margin-top:16px">This page reads your data. It never changes it —
-    corrections belong in the app, where the cost history is rebuilt in order.</p>
-  </div>
+    <div id="banner"></div>
 
-  <!-- ── dashboard ──────────────────────────────────────────────────────────────────────── -->
-  <main id="dash" class="hide">
-    <div id="dashMsg"></div>
-
-    <section>
-      <h2>All time</h2>
-      <p class="sub" id="scopeLine"></p>
-      <div class="tiles" id="boardTiles"></div>
-    </section>
-
-    <section>
-      <h2>Charging</h2>
-      <div class="tiles" id="chargeTiles"></div>
-    </section>
-
-    <section>
-      <h2>This month</h2>
-      <div class="tiles" id="monthTiles"></div>
-    </section>
-
-    <section>
-      <h2>Recent drives</h2>
-      <p class="sub">Drives logged in this vehicle. A drive recorded in another car, or one still
-      waiting to be identified, is not listed and not counted.</p>
-      <div class="scroll"><table id="tripTable">
-        <thead><tr><th>Date</th><th>Distance</th><th>Used</th><th>Cost</th><th>mi/kWh</th><th>Avg speed</th><th>Charge</th><th>Type</th></tr></thead>
-        <tbody></tbody>
-      </table></div>
-      <p class="note" id="tripNote"></p>
-    </section>
-
-    <section>
-      <h2>Recent charges</h2>
-      <div class="scroll"><table id="chargeTable">
-        <thead><tr><th>Date</th><th>Where</th><th>kWh</th><th>Cost</th><th>$/kWh</th><th>Charge</th><th>Minutes</th></tr></thead>
-        <tbody></tbody>
-      </table></div>
-    </section>
-  </main>
-
-  <footer>
-    <div>
-      <a href="index.html">TrueMile EV</a>·
-      <a href="https://gateeng.com/truemile-privacy/">Privacy</a>·
-      <a href="https://gateeng.com/truemile-terms/">Terms</a>·
-      <a href="mailto:support@gateeng.com">Support</a>
+    <!-- ── not configured ─────────────────────────────────────────────────────────────────── -->
+    <div id="unconfigured" class="panel narrow hide">
+      <h2>One value missing</h2>
+      <p class="note">This page needs the project's public anon key before it can talk to anything.
+      Run <code>python tools/web-config.py</code>, which copies it into <code>assets/config.js</code> from the
+      app's own source. Only the public anon key belongs in that file: it is served to every visitor.</p>
     </div>
-    <div style="margin-top:8px">© 2026 Gate Engineering LLC</div>
-  </footer>
+
+    <!-- ── sign in ────────────────────────────────────────────────────────────────────────── -->
+    <div id="signIn" class="panel narrow hide">
+      <h2>Sign in</h2>
+      <p class="sub">The same account you use in the app. You see your own data and nothing else.</p>
+      <button id="googleBtn" type="button" class="primary wide">Continue with Google</button>
+      <p class="note center gap-top">or</p>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" placeholder="you@example.com">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <button id="emailBtn" type="button" class="wide gap-top">Sign in with email</button>
+      <div id="signInMsg"></div>
+      <p class="note signin-note">This page reads your data. The one thing it can change is deleting your account,
+      from Account, after you type a confirmation word. Corrections to drives and charges belong in the app.</p>
+    </div>
+
+    <!-- ── the signed-in sections ─────────────────────────────────────────────────────────── -->
+    <main id="view" class="hide"></main>
+
+    <footer>
+      <div>
+        <a href="https://gateeng.com/truemile-privacy/">Privacy</a>·
+        <a href="https://gateeng.com/truemile-terms/">Terms</a>·
+        <a href="https://gateeng.com/truemile-privacy/delete/">Delete account</a>·
+        <a href="https://gateeng.com">Gate Engineering</a>
+      </div>
+      <div class="foot2">© 2026 Gate Engineering LLC · 2501 Chatham Rd 8139, Springfield, IL 62704 · (331) 224-4919</div>
+    </footer>
+  </div>
 
 </div>
-<script src="assets/config.js"></script>
-<script src="assets/api.js"></script>
-<script src="assets/app.js"></script>
+<script type="module" src="assets/app.js?v=3"></script>
 </body></html>

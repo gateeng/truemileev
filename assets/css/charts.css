@@ -1,0 +1,27 @@
+/* TrueMile EV web | the embeddable chart block (views/charts.js mountCharts). Only .charts-* classes. */
+
+.charts-card{min-width:0}
+.charts-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.charts-chips .chip{cursor:pointer;min-height:36px;padding:4px 12px;font-weight:600;color:var(--muted);background:var(--card2)}
+.charts-chips .chip:hover{background:var(--hover);color:var(--ink)}
+.charts-chips .chip.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.charts-controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 8px}
+.charts-field{display:flex;flex-direction:column;gap:4px;margin:0;min-width:0;text-transform:none;letter-spacing:normal;
+  font-size:1em;color:var(--ink)}
+.charts-field > span{font-size:.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.charts-n-input{width:6.5em}
+.charts-scope{margin:4px 0 12px}
+
+.charts-panel{min-width:0}
+.charts-title{margin:0 0 2px;font-size:1rem}
+.charts-sub{margin:0 0 10px}
+.charts-svg{width:100%;min-height:120px;overflow:hidden}
+.charts-svg svg:not(.ico){width:100%;height:auto}
+.charts-foot{display:flex;justify-content:flex-end;margin-top:8px}
+.charts-table{margin-top:10px}
+.charts-table td{font-variant-numeric:tabular-nums}
+
+@media (max-width:640px){
+  .charts-controls > *{flex:1 1 100%}
+  .charts-n-input{width:100%}
+}

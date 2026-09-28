@@ -1,17 +1,38 @@
 # TrueMile EV — website and dashboard
 
 `index.html` is the public page. `app.html` is the signed-in dashboard. No framework, no bundler, no
-CDN, no analytics — same as the legal pages, and the same claim the privacy policy makes.
+CDN, no web font, no analytics, no chart library. Map tiles come from OpenFreeMap and are the page's
+one outside service (see rule 6). Charts, and routes on printed pages, are plain SVG.
 
 ```
 web/truemileev/
-  index.html          public page: what the app does, how it works, links
-  app.html            the dashboard (noindex)
-  assets/config.js    project URL + the public anon key (tools/web-config.py fills it)
-  assets/api.js       auth + data. Raw fetch, no SDK
-  assets/app.js       rendering
-  assets/style.css
+  index.html            public page: what the app does, how it works, links
+  app.html              the dashboard (noindex): one page, hash routes (#/account, #/map, ...)
+  assets/config.js      project URL + the public anon key (tools/web-config.py fills it); applies a
+                        stored Light / Dark choice before the first paint
+  assets/app.js         the shell: sign-in, the left sidebar, the topbar (vehicle, plan, Refresh, the
+                        theme switch), the router (old links redirected), the error boundary
+  assets/style.css      the design system: tokens (light and dark), shell, shared components
+  assets/lib/*.js       data (api.js is the only file that talks to the network) and pure logic
+  assets/views/*.js     one module per section or detail page: account, garage, financial, charges
+                        (Charge), charge, map_section (Map), trips, trip, journeys, journey, report,
+                        print, settings; plus the shared tilegrid, rangebar, typefilter, carfilter,
+                        charts and mapview (the only module that loads MapLibre)
+  assets/css/*.css      per-section styles
+  assets/vendor/        MapLibre GL JS 6.11.2 (BSD-3-Clause) and the Material icons license
+                        (Apache-2.0); byte-identical copies, hashes pinned by the tests
 ```
+
+The sections, in the sidebar's order: **Account** (email, sign-in method, plan and trial, how to
+upgrade and manage payments in Google Play, My data CSV, delete account), **Garage** (vehicle, door-jamb
+label values, tires, tow and trailers, home charger, insights, diagnostics), **Financial** (the Board
+figures, total paid, saved, efficiency, spend by network, memberships kept in this browser, monthly
+table, cost charts), **Charge** (tiles, a filterable charge list, a map of charge locations, charge
+detail with the charging curve and your learned DC curve), **Map** (distance tiles including journeys,
+a filterable trip list, trip detail with the route map, journeys), **Report** (period, journey and
+business mileage documents with filters, title / header / footer / footnote, templates, accent, logo,
+print preview, PDF and CSV, issued mileage reports) and **Settings** (units, theme, default period,
+tiles, per-browser preferences, licenses).
 
 ## 1. The anon key (already done)
 
@@ -20,97 +41,133 @@ web/truemileev/
 reads it from `SupabaseClient.kt`, the one place that already has it, so there is nothing to copy by
 hand and nothing to mistype.
 
-If you would rather take it from the console: Supabase dashboard → Project Settings → API → Project
-API keys → the `anon` `public` row → copy, and paste between the quotes on the `ANON_KEY:` line.
-
 That key is public by design — it is in the APK, and every row it can reach is gated by row-level
 security against the signed-in user, not by the key. Rotating it means rebuilding the app too.
-
-**Never put the `service_role` key in this folder.** It ignores row-level security, and everything
-here is served to every visitor.
+Only the public anon key ever belongs in this folder: everything here is served to every visitor.
 
 With the key missing the dashboard shows "One value missing" and does nothing else.
 
-## 2. Google sign-in — two consoles, no code
+## 2. Sign-in
 
-Email and password work as soon as the key is in. Google needs both of these, using the **exact**
-origin you publish on:
+Email and password work as soon as the key is in. Google needs the exact page URL in both consoles:
 
-**Supabase** → Authentication → URL Configuration
-- Site URL: `https://truemileev.com` (or whatever the final origin is)
-- Redirect URLs: add `https://truemileev.com/app.html`
-  (add `http://127.0.0.1:8777/app.html` too if you want to test locally first)
+**Supabase** → Authentication → URL Configuration → Redirect URLs:
+`https://gateeng.com/truemileev/app.html` (and `http://127.0.0.1:8777/truemileev/app.html` to test
+locally).
 
 **Google Cloud** → APIs & Services → Credentials → the OAuth client behind `GOOGLE_WEB_CLIENT_ID`
-- Authorised JavaScript origins: `https://truemileev.com`
+- Authorised JavaScript origins: `https://gateeng.com`
 - Authorised redirect URIs: `https://fsnmjxtthahperapdihw.supabase.co/auth/v1/callback`
 
 The last one is Supabase's own callback, not this site's — Google returns to Supabase, Supabase
-returns to `app.html`.
+returns to `app.html`. If the page URL is not allow-listed, Supabase sends the browser to the Site URL
+instead and the page stays signed out.
 
-## 3. Publishing — it goes live at `gateeng.com/truemileev/`
+The session lives in `sessionStorage`, so it dies with the tab. That is deliberate: a token that
+survives a closed tab is a token that survives a shared computer. A link opened in a new tab starts
+signed out for the same reason, which is why the dashboard is a single page with hash routes.
 
-Nothing in THIS repo is served to anyone. The live pages are separate repos in the
-`gate-software-development` GitHub org; gateeng.com is the org site's custom domain, which is why a
-project repo named `truemile-privacy` appears at `gateeng.com/truemile-privacy/`. The TrueMile site
-follows that pattern exactly:
+## 3. Publishing — it goes live at `https://gateeng.com/truemileev/`
 
-1. Create a repo named **`truemileev`** in the `gate-software-development` org.
-2. Upload the CONTENTS of `web/truemileev/` into it (`index.html`, `app.html`, `assets/`).
-3. Settings → Pages → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`.
-4. It is live at `https://gateeng.com/truemileev/` (and at
-   `https://gate-software-development.github.io/truemileev/`).
+Nothing in THIS repo is served to anyone. The live pages are separate repos in the `gateeng` GitHub
+org; gateeng.com is the org site's custom domain, which is why a project repo named `truemileev`
+appears at `https://gateeng.com/truemileev/`.
 
-The landing page in `web/site/index.html` already links to `/truemileev/` and `/truemileev/app.html`
-from the TrueMile card — upload that too, or make the same two edits on the live copy.
+1. `python tools/web-stamp.py` — a new BUILD stamp in every module and a new `?v=` in `app.html`.
+   GitHub Pages caches files for up to ten minutes; when a browser pairs a new page with an older
+   module, the dashboard says "The dashboard was just updated. Reload to finish."
+2. Clone `gateeng/truemileev`, diff every file against this folder, and copy only the intended
+   changes. The owner edits the live repo directly (the product page's footer, the Search Console
+   verification file): live wins there. Always diff before overwriting.
+3. Commit, push to `main`; Pages rebuilds in about a minute.
 
-Then the two consoles, using that exact URL:
-- Supabase → Authentication → URL Configuration → Redirect URLs: `https://gateeng.com/truemileev/app.html`
-- Google Cloud → the OAuth client → Authorised JavaScript origins: `https://gateeng.com`
+Never copy `web/tests/` or `web/fixtures/`: they are not part of this folder and never published.
+No file or folder here may start with `_` or `.` (Pages runs Jekyll, which skips them).
 
-**About `truemileev.com` later.** A custom domain set on the `truemileev` project repo MOVES it to
-that domain — it stops answering at `gateeng.com/truemileev/`. So pick which one is canonical. The
-straightforward arrangement: keep this repo canonical at `gateeng.com/truemileev/` until the domain
-exists, then either move the domain onto it and leave gateeng.com's card linking out to it, or point
-truemileev.com at a redirect. Whichever you choose, both console entries above have to be re-done
-with the new origin, and the sign-in breaks until they are.
+**A custom domain later.** A custom domain set on the `truemileev` project repo MOVES it — it stops
+answering at gateeng.com/truemileev/. Whichever origin becomes canonical, both console entries above
+have to be re-done with it, and sign-in breaks until they are. The origin is also a security boundary:
+everything published under gateeng.com shares one storage jar.
 
-Two more things worth knowing:
+## 4. Running it locally
 
-- **The origin is a security boundary, not just branding.** Everything published under gateeng.com
-  shares one storage jar, so a sign-in session there is reachable by any other page on that domain.
-  Today that is only your own legal pages; a separate `truemileev.com` would isolate it properly.
-- **The session lives in `sessionStorage`**, so it dies with the tab. That is deliberate: a token
-  that survives a closed tab is a token that survives a shared computer.
+    python -m http.server 8777 --bind 127.0.0.1 --directory web
 
-## 4. Rules for anything added here later
+then open `http://127.0.0.1:8777/truemileev/app.html?fixtures`. On 127.0.0.1 or localhost, `?fixtures`
+serves a synthetic demo account (`web/fixtures/demo-account.json`, made by `make-fixtures.js`) through
+the same data layer, with no sign-in; maps load OpenFreeMap tiles for the synthetic area unless the
+URL adds `&notiles`, and nothing else leaves 127.0.0.1. A "Demo data" pill shows in the topbar.
+`&tier=entry`, `&tier=pro`, `&tier=max`, `&tier=trial` or `&tier=business` previews that plan's
+locks. ES modules do not load from `file://`, so the server is needed.
 
-1. **Read-only.** The tables this page reads carry a `FOR ALL` policy, so a browser *could* write to
-   them — and a direct write bypasses the date-ordered cost replay the app and the sync functions
-   run, leaving the money wrong on both surfaces with no error. Corrections belong in the app.
-2. **Never derive a figure the server already returns.** `get_stats` is net-basis, excludes rebuilt
-   drives from every ratio, and rounds the way the app rounds. Recomputing from the columns prints
-   numbers 20–45% off on urban drives and starts an argument with the phone.
-3. **No polling, no auto-refresh, no background tab.** `get_stats` records an app-open on every
-   call, and that counter is what Play reads for the twelve-testers-for-fourteen-days requirement.
-   Page load and the Refresh button. Nothing else.
+Tests (Deno 2): `deno test --allow-read web/tests/`. They pin the formulas to the app's own test
+vectors, and they check the rules below across every published file.
+
+## 5. Rules for anything added here later
+
+1. **Read-only, with one exception: Account → Delete account calls the `delete_account` function
+   after the user types the confirmation word. `api.js` refuses that call without the word, and
+   refuses every other write.** The tables this page reads carry a `FOR ALL` policy, so a browser
+   *could* write to them — and a direct write bypasses the date-ordered cost replay the app and the
+   sync functions run, leaving the money wrong on both surfaces with no error. Corrections belong in
+   the app. `assets/lib/api.js` is the only file that talks to the network, and it refuses anything
+   but reads, sign-in, sign-out, the read-only tier lookup and that one confirmed deletion before a
+   request leaves. Per-browser preferences (units, theme, tiles, report design, memberships) stay in
+   this browser's storage and are never sent.
+2. **Board figures come from get_stats. Period figures (the Report tiles, vs avg, charts, exports) are
+   computed in the browser from the rows with the same formulas the app's Report uses; the app's
+   Report does the same on the phone, and the tests pin the formulas.**
+3. **get_stats at most once per page load, automatically; a second vehicle only on a click. Refresh
+   reloads the page. No polling.** `get_stats` records an app-open on every call.
 4. **Relabel the internal accounting names.** The prepaid-energy figures arrive under internal key
    names; both render as "Prepaid", told apart by their units, the way the app labels them. No raw
-   JSON panel, no generic key→label table, no CSV with real column headers.
-5. **Filter `car_status` on every trip query.** Without it the page folds in drives logged in another
-   car, and drives still waiting to be identified — which the app promises not to count.
-6. **No third-party anything.** No CDN, no remote font, no error-reporting SDK. The promise is
-   published in two places and is checkable by anyone who opens the network tab.
+   JSON panel, no generic key→label table; CSV headers are the app's own human labels.
+5. **Only drives with an empty car status are counted. Drives in another car and drives waiting for an
+   answer may be listed, marked as such, never counted.**
+6. **No third-party code. MapLibre GL JS 6.11.2 is served from this folder (`assets/vendor/`,
+   BSD-3-Clause, byte-identical to npm; the tests pin its hashes). The one outside service is
+   OpenFreeMap map tiles (`tiles.openfreemap.org`), loaded only by the dashboard's maps and telling
+   OpenFreeMap the map area being viewed, as the privacy policy's "Map tiles (OpenFreeMap)" line says.
+   Only that host is allowed.** No CDN, no remote font, no error-reporting SDK. `app.html`
+   carries a Content-Security-Policy: scripts, styles, images and workers from this folder only,
+   network requests to this folder, the project's API and the tile host only. The CSP alone does not
+   cover the map tiles: MapLibre fetches them inside its worker, and a same-origin worker does not
+   inherit a `<meta>` CSP (GitHub Pages sends no CSP header). The tile allow-list is enforced by
+   `lib/mapdata.js` `tileRequest` (MapLibre's `transformRequest`, run on the page before the worker
+   fetches): the tile host, this site, `data:` and `blob:` pass; any other URL — for example a TileJSON
+   that starts pointing elsewhere — is rewritten to an empty `data:` reply and logged once. Printed
+   pages never contain a tile map. Account links to the app's Google Play listing and subscriptions
+   page (`https://play.google.com`, links only, nothing loaded from there).
 7. **Never widen what is disclosed.** Routes, charge locations, home coordinates and the VIN are
    disclosed as *stored*. Behind the user's own session that is fine; a share link, an embed, a
-   public URL or a third-party payload turns storage into publication.
+   public URL or a third-party payload turns storage into publication. The dashboard never selects
+   the VIN column, never shows a VIN and never prints charge coordinates on a page or in a PDF; on
+   screen, charge locations show on the maps only, and home pins are hidden unless you turn them on.
+   The two CSV files are the exception, as in the app: the Report CSV and the My data CSV carry each
+   charge's GPS column exactly as the app's own exports do (`csv_test.js` pins it). Dropping it from the
+   Report CSV is an open owner decision (§6). Garage → Tow shows the tow
+   capacity's value, never its key (the key contains the VIN).
 
-## 5. Not here yet
+## 6. Not here yet
 
 - **Admin metrics.** Everything an operator would want — crash reports, activity, subscriptions —
   has row-level security with no policies, so it is invisible to a browser by design and correctly
-  so. It needs one new edge function holding the service role, with an admin allowlist. Not built.
-- **Charts.** Charging curves and trends need a self-hosted renderer (inline SVG, most likely) since
-  a chart library from a CDN is out.
-- **Fleet.** The server has no account-wide aggregate; it was removed deliberately. The app's Fleet
-  scope is local-only.
+  so. It would need a new server-side function with an admin allowlist. Not built.
+
+Asked for in the redesign but not deliverable from the browser as things stand. Each needs an owner
+decision (and most an app or cloud change); the page shows a plain explanation in their place:
+
+- **Window sticker (Garage → Vehicle).** The app fetches it from Ford with the VIN; this page never
+  selects the VIN (rule 7). Options: keep it app-only (today), or allow selecting the VIN here and
+  linking Ford's sticker URL.
+- **Door-jamb photos (Garage → Vehicle).** The photos stay in the app's private storage and are never
+  uploaded; only the values read from them are shown. Options: keep them phone-only (today), or upload
+  them to storage (a privacy-policy change).
+- **Memberships (Financial).** The app records none, so the list is typed in and kept per browser
+  (never uploaded, cleared when another account signs in here). Real memberships need an app field
+  and a cloud column.
+- **Payment history (Account → Payments).** Payments go through Google Play; the subscription table
+  is invisible to a browser (see Admin metrics), so the page links to Google Play instead. A history
+  would need read access to the user's own subscription rows.
+- **GPS column in the Report CSV.** Kept for parity with the app's export (rule 7). Owner call:
+  keep it, or drop it from the Report CSV and keep it only in My data.

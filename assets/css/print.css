@@ -1,0 +1,188 @@
+/* TrueMile EV web | the designed documents (views/print.js, lib/reportdesign.js docHtml) and the print
+   rules for the whole page. Linked last.
+   A document is a white "paper" (.print-paper) in the print palette whatever the page theme: black text
+   on white, the reader's accent (--rpt-accent), font (--rpt-font) and size (--rpt-size) set on it by
+   reportdesign.cssVars. Templates: .print-tpl-classic (the app's Period PDF look), .print-tpl-modern
+   (accent band, summary cards, accent table heads), .print-tpl-compact (dense, one-line summary).
+   On paper every piece of page chrome and every control is hidden, maps never print (the journey route
+   is an SVG), and the header / footer lines repeat on every page as fixed running lines; the frame
+   table's empty thead / tfoot keep the page content clear of them. */
+
+/* ── the #/print/* toolbar ──────────────────────────────────────────────────────────────── */
+.print-view{padding:0;min-width:0}
+.print-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
+.print-toolbar .btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.print-toolnote{flex-basis:100%;margin:0}
+.print-yearbar{margin-top:-6px}
+.print-yearpick{display:flex;align-items:center;gap:8px;margin:0;text-transform:none;letter-spacing:normal;font-size:1em;color:var(--ink)}
+.print-yearpick > span{font-size:.74em;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.print-yearpick select{width:auto}
+
+/* ── the paper ──────────────────────────────────────────────────────────────────────────── */
+.print-paper{
+  --rpt-accent:#0E7490; --rpt-accent-ink:#FFFFFF;
+  --rpt-font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; --rpt-size:10.5pt;
+  /* the print palette, also for the SVG route (it reads these tokens) */
+  --ink:#111; --muted:#4b5563; --dim:#6b7280; --line:#c9ccd1; --card:#fff; --card2:#f1f2f4; --cyan:var(--rpt-accent);
+  --rpt-zebra:#f4f5f7; --rpt-soft:color-mix(in srgb,var(--rpt-accent) 9%,#fff);
+  background:#fff;color:#111;font-family:var(--rpt-font);font-size:var(--rpt-size);line-height:1.4;
+  display:flex;flex-direction:column;box-sizing:border-box;text-align:left;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+.print-paper.print-full{width:100%;padding:28px 32px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.18);min-height:0;overflow-x:auto}
+.print-paper *{box-sizing:border-box}
+.print-paper a{color:inherit}
+
+.print-runhead,.print-runfoot{font-size:.78em;color:#4b5563;display:flex;justify-content:space-between;gap:12px;min-height:1.4em}
+.print-runhead{border-bottom:1px solid #d7dade;padding-bottom:4px;margin-bottom:12px}
+.print-runfoot{border-top:1px solid #d7dade;padding-top:4px;margin-top:auto}
+.print-runfoot-text{min-width:0;overflow-wrap:anywhere}
+.print-pagehint{margin-left:auto;color:#9ca3af;white-space:nowrap}
+.print-runhead{overflow-wrap:anywhere}
+
+.print-frame{width:100%;border-collapse:collapse;table-layout:fixed;margin:0;font-size:1em;flex:0 0 auto}
+.print-frame > thead > tr > td,.print-frame > tfoot > tr > td,.print-frame > tbody > tr > td{
+  padding:0;border:0;text-align:left;white-space:normal;background:none;vertical-align:top}
+.print-frame > tbody > tr:hover{background:none}
+.print-frame > thead,.print-frame > tfoot{display:none}
+.print-runfoot{margin-top:auto}
+.print-paper > .print-frame + .print-runfoot{margin-top:auto;padding-top:4px}
+
+.print-doc{min-width:0;color:#111;background:none;border:0;padding:0}
+
+/* head */
+.print-head{display:flex;align-items:flex-start;gap:16px;margin:0 0 6px}
+.print-head.print-logo-at-right{flex-direction:row-reverse}
+.print-headtext{flex:1 1 auto;min-width:0}
+.print-logobox{flex:none;line-height:0}
+.print-logo{display:block;width:auto;max-width:240px;object-fit:contain}
+.print-logo-small{height:32px}.print-logo-medium{height:48px}.print-logo-large{height:64px}
+.print-h1{font-size:1.75em;line-height:1.2;margin:0 0 4px;font-weight:800;color:#111;letter-spacing:0;text-transform:none}
+.print-subtitle{font-size:1.1em;font-weight:600;color:#374151;margin:0 0 4px}
+.print-dateline{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.print-title{font-size:1.05em}
+.print-line{margin-top:2px}
+.print-dim{color:#4b5563}
+.print-empty{color:#4b5563;margin:18px 0 4px}
+
+/* blocks */
+.print-block{padding:14px 0 4px}
+.print-h2{margin:0 0 8px;font-size:.82em;letter-spacing:.14em;text-transform:uppercase;color:var(--rpt-accent);font-weight:800;line-height:1.4}
+.print-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 22px;margin:0}
+.print-kv{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted #c9ccd1;padding:4px 0}
+.print-kv dt{color:#4b5563;font-weight:700;font-size:.92em}
+.print-kv dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+
+.print-scroll{overflow-x:auto;max-width:100%}
+.print-table{width:100%;border-collapse:collapse;font-size:.88em;font-variant-numeric:tabular-nums;margin:0}
+.print-table th,.print-table td{padding:4px 7px;border-bottom:1px solid #e1e3e6;text-align:left;color:#111;vertical-align:top;overflow-wrap:anywhere}
+.print-table th{font-size:.82em;letter-spacing:.04em;text-transform:uppercase;color:#4b5563;font-weight:700;border-bottom:1.5px solid #9ca3af;vertical-align:bottom}
+.print-table .print-num{text-align:right;white-space:nowrap;overflow-wrap:normal}
+.print-table td:first-child{white-space:nowrap;overflow-wrap:normal}
+.print-table th.print-num{white-space:normal}
+.print-table tbody tr:hover{background:none}
+.print-table.print-zebra tbody tr:nth-child(even) td{background:var(--rpt-zebra)}
+.print-foot{color:#4b5563;font-size:.86em;margin:8px 0 0}
+
+.print-notes{margin:0}
+.print-note{display:grid;grid-template-columns:8.5em minmax(0,1fr);gap:10px;padding:3px 0;border-bottom:1px dotted #c9ccd1}
+.print-note dt{color:#4b5563;font-weight:700;font-size:.92em}
+.print-note dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+
+.print-route svg{max-height:440px}
+.print-loading{margin:6px 0}
+
+.print-footnote{margin:18px 0 0;padding:10px 0 0;border-top:1px solid #d7dade;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.92em;color:#1f2937}
+.print-generated{margin:12px 0 0;font-size:.8em;color:#6b7280}
+
+/* business mileage */
+.print-banner{border:1px solid #b45309;color:#111;border-radius:8px;padding:8px 12px;margin:0 0 14px;font-weight:700}
+.print-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 8px}
+.print-kpi{background:#f1f2f4;border-radius:8px;padding:10px 8px;text-align:center;min-width:0}
+.print-kpi-l{font-size:.82em;color:#4b5563}
+.print-kpi-v{font-size:1.6em;font-weight:800;font-variant-numeric:tabular-nums}
+.print-hi .print-kpi-l,.print-hi .print-kpi-v{color:var(--rpt-accent)}
+.print-totals{margin:0}
+.print-totals > div{display:flex;justify-content:space-between;gap:10px;font-weight:800;padding:6px 8px;border-top:1px solid #c9ccd1}
+.print-totals dd{margin:0;font-variant-numeric:tabular-nums}
+.print-totals .print-minor{font-weight:600;color:#4b5563;border-top:0}
+
+/* ── templates ──────────────────────────────────────────────────────────────────────────── */
+/* modern: an accent band with the title in the accent's ink, summary cards, accent table heads */
+.print-tpl-modern .print-head{background:var(--rpt-accent);color:var(--rpt-accent-ink);padding:16px 18px;border-radius:8px;margin-bottom:10px}
+.print-tpl-modern .print-head .print-h1,.print-tpl-modern .print-head .print-subtitle,
+.print-tpl-modern .print-head .print-dim,.print-tpl-modern .print-head .print-title{color:var(--rpt-accent-ink)}
+.print-tpl-modern .print-head .print-dim{opacity:.85}
+.print-tpl-modern .print-logobox{background:#fff;border-radius:6px;padding:4px}
+.print-tpl-modern .print-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.print-tpl-modern .print-kv{flex-direction:column;justify-content:flex-start;gap:2px;border:0;border-left:3px solid var(--rpt-accent);
+  background:var(--rpt-soft);border-radius:6px;padding:8px 10px}
+.print-tpl-modern .print-kv dd{text-align:left;font-size:1.25em;font-weight:800}
+.print-tpl-modern .print-kv dt{font-size:.8em;text-transform:uppercase;letter-spacing:.06em}
+.print-tpl-modern .print-table th{background:var(--rpt-accent);color:var(--rpt-accent-ink);border-bottom:0}
+.print-tpl-modern .print-table.print-zebra tbody tr:nth-child(even) td{background:var(--rpt-soft)}
+.print-tpl-modern .print-h2{border-bottom:2px solid var(--rpt-accent);padding-bottom:3px}
+.print-tpl-modern .print-kpi{background:var(--rpt-soft);border-top:3px solid var(--rpt-accent)}
+
+/* compact: dense tables, 9pt, the summary as one wrapped line of label value pairs */
+.print-tpl-compact{font-size:min(var(--rpt-size),9pt);line-height:1.3}
+.print-tpl-compact .print-h1{font-size:1.4em}
+.print-tpl-compact .print-block{padding:8px 0 2px}
+.print-tpl-compact .print-h2{margin-bottom:4px}
+.print-tpl-compact .print-summary{display:flex;flex-wrap:wrap;gap:2px 16px}
+.print-tpl-compact .print-kv{display:inline-flex;border:0;padding:0;gap:5px}
+.print-tpl-compact .print-kv dt{font-weight:600}
+.print-tpl-compact .print-kv dd{font-weight:700}
+.print-tpl-compact .print-table{font-size:.92em}
+.print-tpl-compact .print-table th,.print-tpl-compact .print-table td{padding:2px 5px}
+.print-tpl-compact .print-note{padding:1px 0}
+.print-tpl-compact .print-kpis{gap:6px;margin:8px 0 4px}
+.print-tpl-compact .print-kpi{padding:5px 6px}
+.print-tpl-compact .print-kpi-v{font-size:1.3em}
+
+.print-font-serif .print-table,.print-font-serif .print-kpi-v{font-variant-numeric:tabular-nums lining-nums}
+
+@media (max-width:640px){
+  .print-paper.print-full{padding:16px}
+  .print-paper.print-full .print-summary{grid-template-columns:1fr}
+  .print-paper.print-full .print-kpis{grid-template-columns:1fr}
+  .print-paper.print-full .print-note{grid-template-columns:1fr;gap:0}
+  .print-toolbar .btn{flex:1 1 auto;justify-content:center}
+}
+
+/* ── print ──────────────────────────────────────────────────────────────────────────────── */
+@media print{
+  html,body{background:#fff !important;background-image:none !important;color:#000 !important}
+  #sidebar,.sidebar,.scrim,.topbar,#banner,footer,#nav,
+  .print-toolbar,.rpt-controls,.rpt-switch,.rpt-stagebar,.rpt-caption,.print-pagehint{display:none !important}
+  /* maps never print: tiles are a third party's and canvases print unreliably (routes print as SVG) */
+  .maplibregl-map,.mapview{display:none !important}
+  .shell{display:block !important;grid-template-columns:none !important;padding:0 !important;margin:0 !important}
+  .main,#view,.view-root,.wrap{display:block !important;max-width:none !important;width:auto !important;padding:0 !important;margin:0 !important;
+    background:#fff !important;border:0 !important;box-shadow:none !important;overflow:visible !important}
+
+  /* the Report preview prints as the document itself, unscaled */
+  .rpt,.rpt-layout,.rpt-stagewrap{display:block !important;padding:0 !important;margin:0 !important;border:0 !important;background:none !important}
+  .rpt-stage{display:block !important;padding:0 !important;margin:0 !important;border:0 !important;background:none !important;
+    overflow:visible !important;height:auto !important;box-shadow:none !important}
+  .rpt-scaler{width:auto !important;height:auto !important;overflow:visible !important}
+  .print-paper,.print-paper.print-full,.rpt-paper{width:auto !important;min-height:0 !important;padding:0 !important;margin:0 !important;
+    transform:none !important;box-shadow:none !important;border:0 !important;border-radius:0 !important;overflow:visible !important;display:block !important}
+
+  /* running header / footer on every page; the frame's thead / tfoot hold their room */
+  .print-runhead,.print-runfoot{position:fixed;left:0;right:0;margin:0;background:#fff;z-index:1;min-height:0}
+  .print-runhead{top:0;height:.32in;padding:0 0 3pt;display:flex;align-items:flex-end}
+  .print-runfoot{bottom:0;height:.32in;padding:3pt 0 0;display:flex;align-items:flex-start}
+  .print-frame > thead{display:table-header-group}
+  .print-frame > tfoot{display:table-footer-group}
+  .print-runspace{height:.42in}
+
+  .print-scroll{overflow:visible}
+  .print-table{font-size:.86em}
+  .print-table th,.print-table td{padding:2.5pt 4pt}
+  .print-table thead{display:table-header-group}
+  .print-table tr,.print-note,.print-kv,.print-totals > div,.print-kpi,.print-footnote{break-inside:avoid;page-break-inside:avoid}
+  .print-head,.print-h2{break-after:avoid;page-break-after:avoid}
+  .print-route{break-inside:avoid}
+  a{color:#000;text-decoration:none}
+}
