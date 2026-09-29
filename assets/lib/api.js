@@ -5,25 +5,33 @@
 // content-type" and nothing else (supabase-js adds x-client-info), and a dependency-free page is the
 // only kind that can honestly promise no third-party script of any sort.
 //
-// READ-ONLY by construction, with one deliberate exception: request() checks every call against
+// READ-ONLY by construction, with two deliberate exceptions: request() checks every call against
 // ALLOWED before anything leaves the page. GET reaches the tables below, get_stats, the signed-in user
-// and the account's own report PDFs; POST reaches the auth endpoints, the read-only my_effective_tier
-// function and the delete_account function. No other method exists here. Row-level security would let a
-// signed-in browser write to the tables, and a write from here would skip the app's own date-ordered
-// replays and fire server triggers, so the page never writes a table.
-// The exception is Account -> Delete account: request() lets that one POST through only with the typed
-// confirmation word as its whole body (deleteAccount below); anything else on that path is refused
-// before it leaves the page.
+// and the account's own report PDFs; POST reaches the auth endpoints (sign-in, sign-out and the
+// password reset's recover / verify), the read-only my_effective_tier and founder_slots_left functions
+// and the delete_account function; PUT reaches the signed-in user, for a new password only. No other
+// method exists here. Row-level security would let a signed-in browser write to the tables, and a
+// write from here would skip the app's own date-ordered replays and fire server triggers, so the page
+// never writes a table.
+// The exceptions: Account -> Delete account (request() lets that one POST through only with the typed
+// confirmation word as its whole body, deleteAccount below), and the sign-in page's "Forgot password?"
+// (the app's code flow: recover emails a 6-digit code, verify trades it for a session, PUT /user sets
+// the new password). Each of those paths is refused before it leaves the page unless its body is
+// exactly the one shape that flow sends.
 
 import {
   normTrip, normCharge, normParked, normVehicle, byDateThenId, JAMB_KEYS, projectJamb, normJamb, normTrailer,
   normHome, normTire, normDtc,
 } from "./rows.js";
 
+import {
+  CODE_MIN_LENGTH, CODE_MAX_LENGTH, MIN_PASSWORD_LENGTH, classifySend, classifyVerify, classifyUpdate,
+} from "./recovery.js";
+
 /** Re-exported: the door-jamb keys api.garage() selects (never the VIN, raw OCR or confidence). */
 export { JAMB_KEYS };
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 const REST_TABLES = ["vehicles", "trip_log", "charge_session", "phantom_losses", "trip_notes",
   "user_settings", "charge_curve_log", "tax_reports", "tire_records", "dtc_scans"];
@@ -33,15 +41,29 @@ export const DELETE_PATH = "/functions/v1/delete_account";
 /** The word the reader types, and the function's whole request body ({"confirm": <word>}). */
 export const DELETE_CONFIRM_WORD = "DELETE";
 
+/** The founder offer's public, read-only count of places left (migration 0052; granted to anon). */
+export const FOUNDER_PATH = "/rest/v1/rpc/founder_slots_left";
+/** The server's key for the one supported vehicle (supabase/functions/_shared/founder.ts). */
+export const FOUNDER_MODEL = "ford_f150_lightning";
+
+/** Forgot password (the app's code flow): recover emails the code, verify trades it for a session,
+ *  PUT on the user sets the new password. */
+export const RECOVER_PATH = "/auth/v1/recover";
+export const VERIFY_PATH = "/auth/v1/verify";
+export const USER_PATH = "/auth/v1/user";
+
 /** What may leave the page. GET: exact paths (a table read takes any query) or a prefix ending "/". */
 export const ALLOWED = Object.freeze({
   GET: Object.freeze([
     ...REST_TABLES.map((t) => `/rest/v1/${t}`),
     "/functions/v1/get_stats",
-    "/auth/v1/user",
+    USER_PATH,
     "/storage/v1/object/authenticated/reports/",
   ]),
-  POST: Object.freeze(["/auth/v1/token", "/auth/v1/logout", "/rest/v1/rpc/my_effective_tier", DELETE_PATH]),
+  POST: Object.freeze(["/auth/v1/token", "/auth/v1/logout", RECOVER_PATH, VERIFY_PATH,
+    "/rest/v1/rpc/my_effective_tier", FOUNDER_PATH, DELETE_PATH]),
+  // The ONE write to the account itself: a new password, at the end of the reset (isPasswordBody).
+  PUT: Object.freeze([USER_PATH]),
 });
 
 const SESSION_KEY = "tm_session";
@@ -159,8 +181,47 @@ export function isAllowed(method, path) {
   if (p.includes("..") || /\s/.test(p)) return false;
   if (m === "GET") return ALLOWED.GET.some((a) => (a.endsWith("/") ? p.startsWith(a) && p.length > a.length : p === a));
   if (m === "POST") return ALLOWED.POST.includes(p);
+  if (m === "PUT") return ALLOWED.PUT.includes(p);
   return false;
 }
+
+/** [body] as an object: itself, or its JSON; null for anything else. */
+function bodyObject(body) {
+  let o = body;
+  if (typeof body === "string") {
+    try { o = JSON.parse(body); } catch (_) { return null; }
+  }
+  return o && typeof o === "object" && !Array.isArray(o) ? o : null;
+}
+
+const onlyKeys = (o, keys) => !!o && Object.keys(o).length === keys.length && keys.every((k) => k in o);
+const filled = (v) => typeof v === "string" && v.trim() !== "";
+
+/** recover's body: exactly {email}. */
+export function isRecoverBody(body) {
+  const o = bodyObject(body);
+  return onlyKeys(o, ["email"]) && filled(o.email);
+}
+
+/** verify's body: exactly {type: "recovery", email, token} with a 6-10 digit token (lib/recovery.js). */
+export function isVerifyBody(body) {
+  const o = bodyObject(body);
+  return onlyKeys(o, ["type", "email", "token"]) && o.type === "recovery" && filled(o.email) &&
+    typeof o.token === "string" && new RegExp(`^\\d{${CODE_MIN_LENGTH},${CODE_MAX_LENGTH}}$`).test(o.token);
+}
+
+/** PUT /auth/v1/user's body: exactly {password}, and nothing else about the account (no email, no data). */
+export function isPasswordBody(body) {
+  const o = bodyObject(body);
+  return onlyKeys(o, ["password"]) && typeof o.password === "string" && o.password.length >= MIN_PASSWORD_LENGTH;
+}
+
+/** The body guard for each path that changes something; a path not listed here has none. */
+const BODY_RULES = [
+  { method: "POST", path: RECOVER_PATH, ok: isRecoverBody, why: "blocked: a reset code request carries the email only" },
+  { method: "POST", path: VERIFY_PATH, ok: isVerifyBody, why: "blocked: only a password-reset code is checked here" },
+  { method: "PUT", path: USER_PATH, ok: isPasswordBody, why: "blocked: only a new password may be sent" },
+];
 
 /** True when [body] is exactly {"confirm": DELETE_CONFIRM_WORD} (an object with that one key, or its JSON). */
 export function isDeleteBody(body) {
@@ -186,6 +247,8 @@ export async function request(method, path, { body, headers, auth: useAuth = tru
     throw new Error("blocked: the account deletion needs its confirmation word");
   }
   if (!isAllowed(method, path)) throw new Error("blocked: read-only page");
+  const rule = BODY_RULES.find((r) => r.method === String(method || "").toUpperCase() && r.path === pathOf(String(path || "")));
+  if (rule && !rule.ok(body)) throw new Error(rule.why);
   if (!cfg || !cfg.PROJECT_URL || !cfg.ANON_KEY) throw new Error("The dashboard is not configured");
   if (!fetchImpl) throw new Error("No network in this environment");
   const h = isDelete ? {} : { apikey: cfg.ANON_KEY };
@@ -195,7 +258,8 @@ export async function request(method, path, { body, headers, auth: useAuth = tru
     h.authorization = `Bearer ${s.access_token}`;
   }
   const m = method.toUpperCase();
-  if (m === "POST") h["content-type"] = "application/json";
+  const sends = m === "POST" || m === "PUT";
+  if (sends) h["content-type"] = "application/json";
   if (headers && !isDelete) {
     for (const [k, v] of Object.entries(headers)) {
       const lk = k.toLowerCase();
@@ -203,7 +267,7 @@ export async function request(method, path, { body, headers, auth: useAuth = tru
     }
   }
   const init = { method: m, headers: h };
-  if (m === "POST") init.body = body === undefined ? "{}" : (typeof body === "string" ? body : JSON.stringify(body));
+  if (sends) init.body = body === undefined ? "{}" : (typeof body === "string" ? body : JSON.stringify(body));
   const r = await fetchImpl(`${cfg.PROJECT_URL}${path}`, init);
   if (!r.ok) {
     const t = String(await r.text().catch(() => ""));
@@ -212,6 +276,7 @@ export async function request(method, path, { body, headers, auth: useAuth = tru
     err.status = r.status;
     err.serverMessage = said;       // the server's own sentence, internal names replaced
     err.detail = t;                 // the raw body, for the console only; never shown
+    try { err.retryAfter = (r.headers && r.headers.get && r.headers.get("retry-after")) || null; } catch (_) { err.retryAfter = null; }
     try { console.warn(`${method.toUpperCase()} ${pathOf(path)} → ${r.status}`, t.slice(0, 500)); } catch (_) { /* no console */ }
     throw err;
   }
@@ -382,6 +447,57 @@ export const auth = {
     }
   },
 
+  // ── forgot password: the app's code flow (lib/recovery.js has the rules and the words) ────────
+  // 1. requestPasswordReset(email)        POST /auth/v1/recover {email}: the server emails a code, and
+  //    answers the same whether or not the address has an account.
+  // 2. verifyResetCode(email, code)       POST /auth/v1/verify {type: "recovery", email, token}: a right
+  //    code comes back as a session, which is RETURNED, not kept (nothing is signed in yet).
+  // 3. finishPasswordReset(session, pw)   PUT /auth/v1/user {password} with that session's own token;
+  //    only when the server takes the new password does the session become this tab's sign-in.
+  // Each returns lib/recovery.js's outcome ({kind: ...}); none throws for a server or network answer.
+  // Anon key only, like every other call here.
+
+  async requestPasswordReset(email) {
+    if (fixturesUrl) return { kind: "demo" };
+    try {
+      await request("POST", RECOVER_PATH, { auth: false, body: { email: String(email ?? "").trim() } });
+      return classifySend(200, "");
+    } catch (err) {
+      return outcomeOf(err, classifySend);
+    }
+  },
+
+  async verifyResetCode(email, code) {
+    if (fixturesUrl) return { kind: "demo" };
+    try {
+      const r = await request("POST", VERIFY_PATH,
+        { auth: false, body: { type: "recovery", email: String(email ?? "").trim(), token: String(code ?? "") } });
+      return classifyVerify(r.status || 200, await r.text().catch(() => ""), null, nowSec());
+    } catch (err) {
+      return outcomeOf(err, classifyVerify);
+    }
+  },
+
+  async finishPasswordReset(session, password) {
+    if (fixturesUrl) return { kind: "demo" };
+    if (!session || !session.access_token) return { kind: "expired" };
+    let out;
+    try {
+      await request("PUT", USER_PATH, {
+        auth: false, headers: { authorization: `Bearer ${session.access_token}` }, body: { password: String(password ?? "") },
+      });
+      out = classifyUpdate(200, "");
+    } catch (err) {
+      out = outcomeOf(err, classifyUpdate);
+    }
+    if (out.kind === "updated") {
+      saveSession({ access_token: session.access_token, refresh_token: session.refresh_token || null,
+        expires_at: session.expires_at || 0, token_type: session.token_type || "bearer" });
+      me = null;
+    }
+    return out;
+  },
+
   async signOut() {
     if (fixturesUrl) return;
     const s = loadSession();
@@ -396,6 +512,17 @@ export const auth = {
     me = null;
   },
 };
+
+/**
+ * A reset step's failed request as lib/recovery.js's outcome: the server's status and body when one
+ * came back, "network" when nothing did. A page-side block (a body the allow list refused) is a bug in
+ * this page, not an answer, and is thrown.
+ */
+function outcomeOf(err, classify) {
+  if (err && /^blocked:/.test(String(err.message))) throw err;
+  if (err && err.status) return classify(err.status, err.detail || "", err.retryAfter || null);
+  return classify(0, "");
+}
 
 /**
  * The signed-in user as this page keeps it: id, email, created_at, user_metadata {full_name, name}
@@ -551,7 +678,7 @@ export function tierFrom(row) {
   const r = Array.isArray(row) ? row[0] : row;
   if (!r || typeof r !== "object") {
     return { tier: "free", trialLive: false, trialDaysLeft: 0, trialTier: "", source: "", trialEndsMs: 0,
-      trialClosed: "", serverNowMs: 0, unknown: row === null };
+      trialClosed: "", founder: false, serverNowMs: 0, unknown: row === null };
   }
   const source = String(r.source ?? "").trim().toLowerCase();
   // The server's closing reason is an internal key: it is folded here into "abuse" (the vehicle already
@@ -565,6 +692,8 @@ export function tierFrom(row) {
     source,
     trialEndsMs: Math.max(0, Math.trunc(Number(r.trial_ends_epoch_ms) || 0)),
     trialClosed: !reason ? "" : reason.startsWith("abuse") ? "abuse" : "closed",
+    // 0052 adds promo_reason; only "founder" changes what the page says (no founder-offer line).
+    founder: String(r.promo_reason ?? "").trim().toLowerCase() === "founder",
     serverNowMs: Math.max(0, Math.trunc(Number(r.now_epoch_ms) || 0)),
     unknown: false,
   };
@@ -660,6 +789,30 @@ export function loadAccount() {
 }
 
 // ── on-demand reads ───────────────────────────────────────────────────────────────────────────
+
+/** founder_slots_left's reply (a bare number, or its JSON text) as a count; null for anything else. */
+export function parsePlacesLeft(v) {
+  if (typeof v !== "number" && typeof v !== "string") return null;
+  const t = String(v).trim().replace(/^"|"$/g, "");
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+/**
+ * Founder places left for the supported vehicle: a public, read-only count (apikey only, no sign-in
+ * token needed). null in fixture mode or on any failure; the page then shows nothing. 0 also shows
+ * nothing: before launch the offer is off on the server and reads 0, which must never read "sold out".
+ */
+export async function founderPlacesLeft(model = FOUNDER_MODEL) {
+  if (fixturesUrl) return null;
+  try {
+    const r = await request("POST", FOUNDER_PATH, { auth: false, body: { p_model: model } });
+    return parsePlacesLeft(await r.json());
+  } catch (_) {
+    return null;
+  }
+}
 
 /** gps_polyline per trip id, fetched 10 ids at a time and cached for the page's life ("" = none). */
 export async function tripRoutes(ids) {

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8">
+<!-- Where the "Confirm my email" link of the sign-up email lands (the app sends this address as
+     redirect_to: AppConstants.kt CONFIRM_LANDING_URL). Supabase confirms the address before it
+     sends the browser here; this page only says how that went. assets/auth-landing.js removes what
+     Supabase appended to the address before anything paints, keeps no token, stores nothing and
+     makes no network call — the CSP below allows none. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Email confirmation — TrueMile EV</title>
+<meta name="color-scheme" content="dark light">
+<script src="assets/auth-landing.js" data-mode="page"></script>
+<link rel="icon" href="assets/icon.png">
+<link rel="stylesheet" href="assets/site.css">
+</head><body>
+
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="https://gateeng.com/truemileev/">
+      <img src="assets/icon.png" alt="" width="32" height="32">
+      <span>TrueMile <b>EV</b></span>
+    </a>
+  </header>
+
+  <main class="landing" id="landing" aria-live="polite">
+    <p class="lead">One moment…</p>
+    <noscript>
+      <p class="lead">If you tapped Confirm my email in your TrueMile EV email, open TrueMile EV on your
+      phone and sign in. If sign-in says your email isn't confirmed yet, follow the steps in the app to
+      get a new code.</p>
+      <p><a href="https://gateeng.com/truemileev/">About TrueMile EV</a> ·
+      <a href="mailto:support@gateeng.com">support@gateeng.com</a></p>
+    </noscript>
+  </main>
+
+  <footer>
+    <div>
+      <a href="https://gateeng.com/truemileev/">TrueMile EV</a>·
+      <a href="https://gateeng.com/truemile-privacy/">Privacy</a>·
+      <a href="https://gateeng.com/truemile-terms/">Terms</a>·
+      <a href="mailto:support@gateeng.com">support@gateeng.com</a>
+    </div>
+    <div class="fine">© 2026 Gate Engineering LLC</div>
+  </footer>
+</div>
+
+</body></html>

@@ -6,7 +6,7 @@
 // Stored per browser under tm.report.design (JSON) and tm.report.logo (a PNG or JPEG data URL made in
 // the browser from a local file; never uploaded).
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 // ── choices ───────────────────────────────────────────────────────────────────────────────────
 

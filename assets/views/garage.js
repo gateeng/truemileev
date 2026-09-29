@@ -25,7 +25,7 @@ import * as trips from "./trips.js";
 import * as chargesView from "./charges.js";
 import * as charts from "./charts.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 export const TABS = [
   { key: "vehicle", label: "Vehicle", icon: "directions_car" },

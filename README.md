@@ -8,6 +8,8 @@ one outside service (see rule 6). Charts, and routes on printed pages, are plain
 web/truemileev/
   index.html            public page: what the app does, how it works, links
   app.html              the dashboard (noindex): one page, hash routes (#/account, #/map, ...)
+  confirmed.html        where the sign-up email's Confirm my email link lands (noindex; the app sends it
+                        as redirect_to); assets/auth-landing.js reports the result
   assets/config.js      project URL + the public anon key (tools/web-config.py fills it); applies a
                         stored Light / Dark choice before the first paint
   assets/app.js         the shell: sign-in, the left sidebar, the topbar (vehicle, plan, Refresh, the
@@ -63,6 +65,24 @@ The last one is Supabase's own callback, not this site's — Google returns to S
 returns to `app.html`. If the page URL is not allow-listed, Supabase sends the browser to the Site URL
 instead and the page stays signed out.
 
+**Email confirmation link.** The app sends `redirect_to=https://gateeng.com/truemileev/confirmed.html`
+on sign-up and on a re-sent confirmation, so that address must be in the same Redirect URLs list, and
+the Site URL must be `https://gateeng.com/truemileev/` (docs/SUPABASE_EMAIL_TEMPLATES.md). Supabase
+confirms the address before it redirects and appends its result (`#access_token=…&type=signup` or
+`#error=…&error_code=otp_expired`). `assets/auth-landing.js`, a classic script in the `<head>` of
+`confirmed.html` and of the product page, removes that from the address with `history.replaceState`
+before anything paints, keeps no token, stores nothing and makes no network call, then says what
+happened (the product page only when an auth result is present; `#beta` and other anchors are left
+alone). Signing in happens in the app. `app.html` is not involved: its own sign-in return is handled
+by `lib/api.js`.
+
+**Forgot password?** (under the email sign-in) is the app's own code flow (`lib/recovery.js`, a port of
+`ui/auth/PasswordRecoveryFlow.kt`): `POST /auth/v1/recover` emails a code, `POST /auth/v1/verify`
+(`type: "recovery"`) trades the code for a session that is held in memory only, and `PUT /auth/v1/user`
+sets the new password with that session's own token; only then does the session become the tab's
+sign-in. It needs the Supabase "Reset Password" email template to carry the code (`{{ .Token }}`),
+the same template the app relies on.
+
 The session lives in `sessionStorage`, so it dies with the tab. That is deliberate: a token that
 survives a closed tab is a token that survives a shared computer. A link opened in a new tab starts
 signed out for the same reason, which is why the dashboard is a single page with hash routes.
@@ -105,14 +125,15 @@ vectors, and they check the rules below across every published file.
 
 ## 5. Rules for anything added here later
 
-1. **Read-only, with one exception: Account → Delete account calls the `delete_account` function
-   after the user types the confirmation word. `api.js` refuses that call without the word, and
-   refuses every other write.** The tables this page reads carry a `FOR ALL` policy, so a browser
+1. **Read-only, with two exceptions: Account → Delete account calls the `delete_account` function
+   after the user types the confirmation word, and Forgot password? sets a new password
+   (`PUT /auth/v1/user` with exactly `{password}`). `api.js` refuses each of those without its exact
+   body, and refuses every other write.** The tables this page reads carry a `FOR ALL` policy, so a browser
    *could* write to them — and a direct write bypasses the date-ordered cost replay the app and the
    sync functions run, leaving the money wrong on both surfaces with no error. Corrections belong in
    the app. `assets/lib/api.js` is the only file that talks to the network, and it refuses anything
-   but reads, sign-in, sign-out, the read-only tier lookup and that one confirmed deletion before a
-   request leaves. Per-browser preferences (units, theme, tiles, report design, memberships) stay in
+   but reads, sign-in, sign-out, the password reset's three calls, the read-only tier lookup and that
+   one confirmed deletion before a request leaves. Per-browser preferences (units, theme, tiles, report design, memberships) stay in
    this browser's storage and are never sent.
 2. **Board figures come from get_stats. Period figures (the Report tiles, vs avg, charts, exports) are
    computed in the browser from the rows with the same formulas the app's Report uses; the app's

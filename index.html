@@ -2,8 +2,12 @@
 <html lang="en" data-theme="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TrueMile EV — the EV logbook that learns your vehicle</title>
-<meta name="description" content="TrueMile EV connects to your car's OBD adapter and records every drive and charge automatically: true cost per mile, real range, your own charging curve, battery health, and a trip planner built on your driving instead of lab numbers.">
+<meta name="description" content="TrueMile EV for the Ford F-150 Lightning, on Google Play from October 1, 2026. It connects to your truck's OBD adapter and records every drive and charge automatically: true cost per mile, real range, your own charging curve, battery health, and a trip planner built on your driving instead of lab numbers.">
 <meta name="color-scheme" content="dark light">
+<!-- An email link that falls back to this page (the project's Site URL) arrives with Supabase's
+     result appended (#access_token=... or #error=...). This classic script removes it from the address
+     before anything paints, keeps no token and shows a small notice; an ordinary #anchor is left alone. -->
+<script src="assets/auth-landing.js" data-mode="notice"></script>
 <link rel="icon" href="assets/icon.png">
 <link rel="stylesheet" href="assets/site.css">
 </head><body>
@@ -56,17 +60,65 @@
   <div id="appnav" class="appnav" role="tablist" aria-label="Choose a screen"></div>
   <div id="readout" class="readout" aria-live="polite"></div>
 
+  <!-- Launch copy: every [data-launch] slot, #plans, #founder, #betaSteps and #betaGets are filled by
+       assets/launch-page.js from assets/lib/launch.js, the one place the launch wording lives. -->
+  <section aria-label="Availability">
+    <div class="launchline">
+      <b data-launch="onPlay"></b>
+      <b data-launch="worksWith"></b>
+      <span data-launch="comingSoon"></span>
+      <a href="#beta" data-launch="betaHint"></a>
+    </div>
+  </section>
+
   <section>
     <h3 class="sec">What you need</h3>
     <div class="promise">
-      <div><b>An Android phone</b><span>Plus a Wear OS watch if you have one. Android Auto ships
-      after closed testing. There is no iPhone app yet.</span></div>
-      <div><b>A Bluetooth OBD adapter</b><span>Any ELM327-style adapter. It stays in the car; the app
-      finds it when you get in. <a href="adapters/">Which adapters work</a>.</span></div>
-      <div><b>Nothing else</b><span>No account with your carmaker, no subscription to a data service,
-      no cloud middleman between you and your own car. The web dashboard adds one outside service:
+      <div><b>The car</b><span data-launch="carNeed"></span></div>
+      <div><b>An Android phone</b><span><span data-launch="auto"></span> <span data-launch="watch"></span>
+      There is no iPhone app yet.</span></div>
+      <div><b>A classic Bluetooth OBD adapter</b><span><span data-launch="adapters"></span>. It stays in the
+      car; the app finds it when you get in. <a href="adapters/">Which adapters work</a>.</span></div>
+      <div><b>Nothing else</b><span>No account with your carmaker and no cloud middleman between
+      you and your own car. The web dashboard adds one outside service:
       OpenFreeMap map tiles, which show the map area you're viewing — the same line our privacy policy
       lists.</span></div>
+    </div>
+  </section>
+
+  <section id="dashboard" aria-labelledby="dashTitle">
+    <h3 class="sec" id="dashTitle" data-launch="dashTitle"></h3>
+    <div class="dash">
+      <div>
+        <p data-launch="dashWhat"></p>
+        <p class="note" data-launch="dashSignIn"></p>
+        <p class="note" data-launch="dashReadOnly"></p>
+      </div>
+      <a class="btn primary" data-launch-href="dash" href="app.html" data-launch="dashCta"></a>
+    </div>
+  </section>
+
+  <section>
+    <h3 class="sec">Plans</h3>
+    <p class="note" data-launch="trial"></p>
+    <div id="plans" class="plans"></div>
+    <p class="note" data-launch="priceNote"></p>
+    <div id="founder" class="founder"></div>
+  </section>
+
+  <!-- The volunteer beta. The app's "coming soon" line points here (vehicle/VehicleSupport.kt BETA_URL). -->
+  <section id="beta" aria-labelledby="betaTitle">
+    <h3 class="sec" id="betaTitle" data-launch="betaTitle"></h3>
+    <div class="beta">
+      <p data-launch="betaWhat"></p>
+      <div class="promise">
+        <div><b>Who can join</b><span data-launch="betaWho"></span></div>
+        <div><b>What you get</b><ul id="betaGets" class="beta-gets"></ul></div>
+      </div>
+      <b class="beta-h">What you do</b>
+      <ol id="betaSteps" class="beta-steps"></ol>
+      <p class="note" data-launch="betaFileNote"></p>
+      <a class="btn primary" data-launch-href="beta" href="mailto:support@gateeng.com" data-launch="betaCta"></a>
     </div>
   </section>
 
@@ -88,5 +140,6 @@
   </footer>
 
 </div>
-<script src="assets/site.js"></script>
+<script type="module" src="assets/launch-page.js"></script>
+<script type="module" src="assets/site.js"></script>
 </body></html>

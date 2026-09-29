@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OBD adapters — TrueMile EV</title>
-<meta name="description" content="Which Bluetooth OBD2 adapters work with TrueMile EV, what to look for when buying one, and what the iPhone app will need.">
+<meta name="description" content="Which Bluetooth OBD2 adapters work with TrueMile EV on the Ford F-150 Lightning: classic Bluetooth only, the Vgate vLinker MC+ and the OBDLink MX+.">
 <link rel="icon" href="../assets/icon.png">
 <link rel="stylesheet" href="../assets/site.css">
 </head>
@@ -13,27 +13,38 @@
 <p><a href="../">← TrueMile EV</a></p>
 <h2>OBD adapters</h2>
 <p>TrueMile EV reads your car through a Bluetooth OBD2 adapter — the small dongle that plugs into the port under the dashboard. It stays in the car, and the app finds it when you get in.</p>
+<!-- The words in [data-launch] slots and #adapterList come from ../assets/lib/launch.js (filled by
+     ../assets/launch-page.js), the one place the launch wording lives. -->
+<p><b data-launch="worksWith"></b> <span data-launch="comingSoon"></span>
+<a href="../#beta" data-launch="betaHint"></a></p>
 
-<h3 class="sec">Verified</h3>
+<h3 class="sec">Recommended</h3>
+<div class="promise" id="adapterList"></div>
+
+<h3 class="sec">Before you buy</h3>
 <div class="promise">
-<div><b>Vgate vLinker MC+</b><span>The adapter we develop and test on. Bluetooth 3.0 for Android and BLE 4.0 for iPhone, the ELM327 / ELM329 / STN command set, plus MS-CAN and SW-CAN for Ford and GM networks.</span></div>
+<div><b>Classic Bluetooth only</b><span data-launch="adapterRule"></span></div>
+<div><b>Other adapters</b><span>An adapter not listed above may connect, but we cannot say it will, and very cheap clones often return fewer readings per second or drop data. The vLinker MC+ is the one we develop and test on.</span></div>
+<div><b>Your car's own codes</b><span>Energy, charging and battery data use vehicle-specific codes, not only standard OBD2 data. Supported vehicles: <span data-launch="vehicles"></span>.</span></div>
 </div>
 
-<h3 class="sec">Other adapters</h3>
+<h3 class="sec">The iPhone app</h3>
 <div class="promise">
-<div><b>Most ELM327-style adapters should work</b><span>The app speaks the standard ELM327 command set, so ordinary Bluetooth adapters connect. The vLinker MC+ is the only one we have verified ourselves. Very cheap clones vary: the slow ones return fewer readings per second, and some drop data.</span></div>
-<div><b>Wi-Fi adapters are not supported</b><span>The app connects over Bluetooth.</span></div>
-<div><b>What your car reports is up to your car</b><span>Trips, energy and charging come from standard OBD2 data. Extras such as battery state of health depend on what your particular vehicle exposes.</span></div>
-</div>
-
-<h3 class="sec">Buying one for the iPhone app</h3>
-<div class="promise">
-<div><b>Choose Bluetooth Low Energy</b><span>An iPhone can only talk to a BLE adapter, or to a classic-Bluetooth one certified under Apple’s MFi program. The vLinker MC+ is dual mode, so a single adapter covers both phones. The iPhone app is still in development.</span></div>
+<div><b>Not yet</b><span>There is no iPhone app yet. When there is, it will need a Bluetooth Low Energy adapter; the vLinker MC+ is dual mode (classic Bluetooth and BLE), so one adapter would cover both phones.</span></div>
 </div>
 
 <h3 class="sec">Adapter trouble?</h3>
 <p>Tell us which adapter and which car at <a href="mailto:support@gateeng.com">support@gateeng.com</a> and we will look into it.</p>
 </main>
-<footer class="wrap">© 2026 Gate Engineering LLC</footer>
+<footer class="wrap">
+  <div>
+    <a href="https://gateeng.com/truemile-privacy/">Privacy</a>·
+    <a href="https://gateeng.com/truemile-terms/">Terms</a>·
+    <a href="https://gateeng.com/truemile-privacy/delete/">Delete account</a>·
+    <a href="https://gateeng.com">Gate Engineering</a>
+  </div>
+  <div style="margin-top:10px">© 2026 Gate Engineering LLC</div>
+</footer>
+<script type="module" src="../assets/launch-page.js"></script>
 </body>
 </html>

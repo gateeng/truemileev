@@ -17,7 +17,7 @@ import {
 import * as cmp from "../lib/compare.js";
 import { allows, lockText } from "../lib/gates.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 /** The "vs avg" switch: on unless the reader turned it off (Settings or any section's switch). */
 export const vsAvgOn = () => store.get("tm.vsavg", "1") !== "0";

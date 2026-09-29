@@ -10,7 +10,7 @@ import { dist, eff, economy, speed, perDist, isMetric } from "./units.js";
 import { fixed, money, tripDuration, fmtCount, MINUS } from "./format.js";
 import { tileAggregate, number, additive, metric, betterFor, KEYS, NONE } from "./metrics.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 export { MINUS };
 export const DEADBAND_PCT = 2.0;

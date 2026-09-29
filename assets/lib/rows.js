@@ -7,7 +7,7 @@
 import { dist, labels } from "./units.js";
 import { fixed, dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const str = (v) => (v === null || v === undefined ? "" : String(v));

@@ -5,19 +5,19 @@
 <meta name="robots" content="noindex">
 <title>TrueMile EV — your dashboard</title>
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M10 12 h18 a20 20 0 0 1 0 40 h-18 z" fill="%231e88d2"/><circle cx="52" cy="32" r="6" fill="%2300e676"/></svg>'>
-<link rel="stylesheet" href="assets/style.css?v=3">
-<link rel="stylesheet" href="assets/css/tiles.css?v=3">
-<link rel="stylesheet" href="assets/css/account.css?v=3">
-<link rel="stylesheet" href="assets/css/garage.css?v=3">
-<link rel="stylesheet" href="assets/css/settings.css?v=3">
-<link rel="stylesheet" href="assets/css/financial.css?v=3">
-<link rel="stylesheet" href="assets/css/charges.css?v=3">
-<link rel="stylesheet" href="assets/css/charts.css?v=3">
-<link rel="stylesheet" href="assets/css/trips.css?v=3">
-<link rel="stylesheet" href="assets/css/map.css?v=3">
-<link rel="stylesheet" href="assets/css/report.css?v=3">
-<link rel="stylesheet" href="assets/css/print.css?v=3">
-<script src="assets/config.js?v=3"></script>
+<link rel="stylesheet" href="assets/style.css?v=5">
+<link rel="stylesheet" href="assets/css/tiles.css?v=5">
+<link rel="stylesheet" href="assets/css/account.css?v=5">
+<link rel="stylesheet" href="assets/css/garage.css?v=5">
+<link rel="stylesheet" href="assets/css/settings.css?v=5">
+<link rel="stylesheet" href="assets/css/financial.css?v=5">
+<link rel="stylesheet" href="assets/css/charges.css?v=5">
+<link rel="stylesheet" href="assets/css/charts.css?v=5">
+<link rel="stylesheet" href="assets/css/trips.css?v=5">
+<link rel="stylesheet" href="assets/css/map.css?v=5">
+<link rel="stylesheet" href="assets/css/report.css?v=5">
+<link rel="stylesheet" href="assets/css/print.css?v=5">
+<script src="assets/config.js?v=5"></script>
 </head><body>
 <div class="shell" id="shell">
 
@@ -53,9 +53,42 @@
       <label for="password">Password</label>
       <input id="password" type="password" autocomplete="current-password">
       <button id="emailBtn" type="button" class="wide gap-top">Sign in with email</button>
+      <p class="forgot"><button id="forgotBtn" type="button" class="link">Forgot password?</button></p>
       <div id="signInMsg"></div>
-      <p class="note signin-note">This page reads your data. The one thing it can change is deleting your account,
-      from Account, after you type a confirmation word. Corrections to drives and charges belong in the app.</p>
+      <p class="note signin-note">This page reads your data. The only changes it can make are a new password, from
+      Forgot password, and deleting your account, from Account, after you type a confirmation word. Corrections
+      to drives and charges belong in the app.</p>
+    </div>
+
+    <!-- ── forgot password: the app's code flow (lib/recovery.js; the app's ui/auth/EmailCodeScreens.kt).
+         Step 1 emails a code; step 2 takes the code AND the new password together, checks the
+         password first so a short one never spends the code, and signs in only once it is saved. -->
+    <div id="reset" class="panel narrow hide">
+      <h2>Reset your password</h2>
+      <div id="resetAsk">
+        <p class="sub">Enter the email you use for your TrueMile EV account. We'll email you a 6-digit code.</p>
+        <label for="resetEmail">Email</label>
+        <input id="resetEmail" type="email" autocomplete="username" placeholder="you@example.com">
+        <button id="resetSendBtn" type="button" class="primary wide gap-top">Send code</button>
+        <p class="forgot"><button id="resetHaveCodeBtn" type="button" class="link">I already have a code</button></p>
+        <p class="note">Signed up with Google? Use Continue with Google instead: there is no password to reset.</p>
+      </div>
+      <div id="resetCodeStep" class="hide">
+        <p class="sub" id="resetSentTo"></p>
+        <div id="resetCodeField">
+          <label for="resetCode">Code</label>
+          <input id="resetCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="14" placeholder="123456">
+        </div>
+        <label for="newPassword">New password</label>
+        <input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+        <label for="newPassword2">New password, again</label>
+        <input id="newPassword2" type="password" autocomplete="new-password">
+        <button id="resetSaveBtn" type="button" class="primary wide gap-top">Set new password</button>
+        <button id="resetResendBtn" type="button" class="wide gap-top">Send a new code</button>
+        <p class="forgot"><button id="resetOtherEmailBtn" type="button" class="link">Use a different email</button></p>
+      </div>
+      <div id="resetMsg" aria-live="polite"></div>
+      <p class="forgot"><button id="resetBackBtn" type="button" class="link">Back to sign in</button></p>
     </div>
 
     <!-- ── the signed-in sections ─────────────────────────────────────────────────────────── -->
@@ -73,5 +106,5 @@
   </div>
 
 </div>
-<script type="module" src="assets/app.js?v=3"></script>
+<script type="module" src="assets/app.js?v=5"></script>
 </body></html>

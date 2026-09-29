@@ -26,7 +26,7 @@ import {
 } from "../lib/finance.js";
 import { emptyFilter, formatChargeFilter, formatNets } from "../lib/chargefilter.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 export const MEMBERSHIPS_KEY = "tm.memberships";
 const DAY = 86_400_000;

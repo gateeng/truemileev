@@ -21,7 +21,7 @@ import {
 } from "../lib/reportdesign.js";
 import * as api from "../lib/api.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 const TRIP_COLORS = ["#22C55E", "#3B82F6", "#F59E0B", "#A855F7", "#14B8A6"];
 const PAGE_STYLE_ID = "rpt-page";

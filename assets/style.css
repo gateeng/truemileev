@@ -371,6 +371,11 @@ footer .foot2{margin-top:10px}
 
 /* signed out: the brand in the topbar, the sign-in card centred */
 .signin-note{margin-top:14px}
+/* "Forgot password?" and the reset flow's own small links: text buttons in the accent colour */
+.forgot{margin:10px 0 0;text-align:center}
+button.link{background:transparent;border:0;padding:4px 6px;color:var(--accent);font-weight:600;font-size:.9em}
+button.link:hover{background:transparent;text-decoration:underline}
+button.link:disabled:hover{background:transparent;text-decoration:none}
 
 @media (max-width:640px){
   .panel.narrow{margin:24px auto}

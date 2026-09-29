@@ -5,7 +5,7 @@
 // Two sessions belong to one stop when the newer starts <= 20 min after the older ends (older end =
 // date + time_minutes) AND both carry parseable GPS within 0.5 mi. Grouping is display-only.
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 export const MAX_STOP_GAP_MS = 20 * 60_000;
 export const MAX_STOP_RADIUS_MILES = 0.5;

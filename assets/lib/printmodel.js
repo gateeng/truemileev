@@ -11,7 +11,7 @@ import { tripEff, typeKey, inScope, classLabel, carCell } from "./rows.js";
 import { jfix } from "./csv.js";
 import { pickColumns } from "./reportdesign.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 const KM = 1.609344;
 

@@ -5,7 +5,7 @@
 import { h, render } from "../lib/dom.js";
 import { lockText } from "../lib/gates.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 /** The route's `types` key → the selected ids (comma-joined; blank = all). */
 export function parseTypes(str) {

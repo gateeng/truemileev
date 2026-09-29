@@ -13,10 +13,18 @@ import { vehicleLabel } from "../lib/rows.js";
 import { myDataCsv } from "../lib/csv.js";
 import {
   planBadge, planTone, sourceLine, trialCard, comparisonRows, currentColumn, canUpgrade, managedInPlay,
-  needsPlayWarning, PLAY_LISTING, PLAY_SUBSCRIPTIONS,
+  needsPlayWarning, planPrice, PLAY_LISTING, PLAY_SUBSCRIPTIONS,
 } from "../lib/plans.js";
+import { LAUNCH } from "../lib/launch.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
+
+/** The founder line for [left] places, or "" to show nothing (unknown, 0, or not a count). */
+export function founderLine(left) {
+  if (!Number.isInteger(left) || left <= 0) return "";
+  const n = Math.min(left, LAUNCH.founder.perVehicleType);
+  return `${LAUNCH.founder.title}: ${LAUNCH.founder.summary} ${n} of ${LAUNCH.founder.perVehicleType} places left for the ${LAUNCH.vehicles[0]}. ${LAUNCH.founder.lifetime}`;
+}
 
 const ext = (href, text, cls = "") =>
   h`<a class="${cls}" href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
@@ -91,15 +99,17 @@ export function mount(el, ctx) {
         <p class="account-source">${sourceLine(tier)}</p>
         ${trial ? h`<div class="msg ${trial.state === "ended" || trial.state === "blocked" ? "warn" : "info"} account-trial">
             <b>${trial.title}</b><div>${trial.body}</div>${trial.note ? h`<div class="note">${trial.note}</div>` : ""}</div>` : ""}
+        <p class="note account-founder" aria-live="polite"></p>
         <h3 class="account-h">What your plan includes</h3>
         <div class="scroll account-compare">
           <table class="table">
             <thead><tr><th scope="col">Feature</th>
-              <th scope="col" class="${col === "pro" ? "account-cur" : ""}">Pro${col === "pro" ? h` <span class="pill tier-pro">Yours</span>` : ""}</th>
-              <th scope="col" class="${col === "max" ? "account-cur" : ""}">Max${col === "max" ? h` <span class="pill tier-max">Yours</span>` : ""}</th></tr></thead>
+              <th scope="col" class="${col === "pro" ? "account-cur" : ""}">Pro${col === "pro" ? h` <span class="pill tier-pro">Yours</span>` : ""}<div class="note account-price">${planPrice("pro")}</div></th>
+              <th scope="col" class="${col === "max" ? "account-cur" : ""}">Max${col === "max" ? h` <span class="pill tier-max">Yours</span>` : ""}<div class="note account-price">${planPrice("max")}</div></th></tr></thead>
             <tbody>${rows.map((r) => h`<tr><td>${r.label}</td>${cell(r.pro, col === "pro")}${cell(r.max, col === "max")}</tr>`)}</tbody>
           </table>
         </div>
+        <p class="note account-prices">${LAUNCH.priceNote}</p>
         ${canUpgrade(tier) ? h`<div class="account-upgrade">
             ${ext(PLAY_LISTING, h`${raw(iconHtml("workspace_premium", { size: 20 }))}<span>Upgrade in the TrueMile app</span>`, "btn primary")}
             <p class="note">Plans are bought through Google Play inside the app: open TrueMile → Settings → My account → Plans &amp; subscription. Your plan shows up here the next time you open this page.</p>
@@ -151,6 +161,17 @@ export function mount(el, ctx) {
     if (b) downloadMyData(b.dataset.mydata, b);
   };
   el.addEventListener("click", onClick);
+
+  // ── Founder offer (launch 9/29: first 10 owners per vehicle type) ──────────────────────────
+  // One public count, read once per visit; nothing shows for a founder, in the demo, on a failure
+  // or at 0 (before launch the offer is off and reads 0 — never shown as "sold out").
+  const founderEl = $(".account-founder");
+  if (founderEl && !fixtures && !(tier && tier.founder)) {
+    api.founderPlacesLeft().then((left) => {
+      const line = founderLine(left);
+      if (alive && line) founderEl.textContent = line;
+    });
+  }
 
   // ── Session ────────────────────────────────────────────────────────────────────────────────
   const so = $(".account-signout");

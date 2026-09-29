@@ -1,12 +1,14 @@
 // TrueMile EV web: plan names, the trial copy and what each plan includes. Pure, DOM-free.
 // Sources: TierRepository.tierLabel, TrialWindow.kt (banner copy, tierLabelWithTrial, banner state),
 // PaywallScreen.kt (featureLabel, proFeatures, maxFeatures, the trial note) and BillingManager.kt (the
-// Play links; the PUBLISHED package only). The lowest plan is called "Entry" here: the app's own label
-// for it is a word this page never uses. No prices: plans are bought in Google Play inside the app.
+// Play links; the PUBLISHED package only). The lowest plan is called "Basic" (LAUNCH.entryPlan): the
+// app's internal id for it is a word this page never uses. Plans are bought in Google Play inside the
+// app; the US prices, the trial length and the Android Auto / watch lines come from lib/launch.js.
 
 import { tierOf, rank } from "./gates.js";
+import { LAUNCH, priceLine } from "./launch.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 /** The app's Google Play store listing. */
 export const PLAY_LISTING = "https://play.google.com/store/apps/details?id=com.gateengineering.truemileev";
@@ -16,10 +18,13 @@ export const PLAY_SUBSCRIPTIONS = "https://play.google.com/store/account/subscri
 const tierKey = (t) => tierOf(t && typeof t === "object" ? t.tier : t);
 const LABELS = { pro: "Pro", max: "Max", business: "Business" };
 
-/** "Max", "Pro", "Business", or "Entry" for the lowest plan. [t] = a tier string or the account's tier object. */
+/** "Max", "Pro", "Business", or "Basic" for the lowest plan. [t] = a tier string or the account's tier object. */
 export function planLabel(t) {
-  return LABELS[tierKey(t)] || "Entry";
+  return LABELS[tierKey(t)] || LAUNCH.entryPlan;
 }
+
+/** The plan's US price line ("$5.99 a month or $59.99 a year") for "pro" / "max"; "" otherwise. */
+export const planPrice = (t) => priceLine(tierKey(t));
 
 /** The plan's colour class: "tier-pro" | "tier-max" | "tier-business" | "tier-entry". */
 export function planTone(t) {
@@ -50,8 +55,8 @@ export function sourceLine(t) {
     case "paid": return "Paid through Google Play";
     case "promo": return "Promotional access";
     case "trial": return "Trial";
-    case "entry": return "Entry plan";
-    default: return rank[tierKey(t)] === 0 ? "Entry plan" : "";
+    case "entry": return `${LAUNCH.entryPlan} plan`;
+    default: return rank[tierKey(t)] === 0 ? `${LAUNCH.entryPlan} plan` : "";
   }
 }
 
@@ -93,16 +98,17 @@ export function trialCard(t, nowMs = Date.now()) {
     case "ended": return { state, title: `Your ${label} trial has ended`,
       body: "Your drives and charges are all still recorded and kept. Plans decide how much you see.", note: "" };
     default: return { state, title: "This vehicle has already had its trial",
-      body: "The 10 days were used with another account. Your drives and charges are still recorded.", note: "" };
+      body: "It was used with another account. Your drives and charges are still recorded.", note: "" };
   }
 }
 
-/** PaywallScreen.proFeatures / maxFeatures, word for word (feature labels in the gate table's order). */
+/** PlanCatalog.proFeatures / maxFeatures (the Plans screen), in the gate table's order. Only SOLD features:
+ *  charge diagnostics has a gate but no screen, so neither the app nor this page lists it. The Android Auto
+ *  and watch lines are the launch wording from lib/launch.js (the app is asked to use the same words). */
 export const PLAN_FEATURES = Object.freeze({
   pro: Object.freeze([
     "Open any drive's full detail",
     "Tag drives as commute, business or personal",
-    "Charge diagnostics",
     "Tap a charger on the map for your history there",
     "Insights: personalized range and route energy",
     "Money saved compared with gas",
@@ -127,8 +133,8 @@ export const PLAN_FEATURES = Object.freeze({
     "Battery Benchmark",
     "Battery health over time",
     "Journeys: group a road trip and export it",
-    "Android Auto",
-    "Wear OS watch app",
+    LAUNCH.androidAuto,
+    LAUNCH.watch,
     "Verifiable business-mileage PDF",
     "Unlimited vehicles and trailers",
     "Your whole history, with no date window",
@@ -157,7 +163,7 @@ export function comparisonRows() {
   return rows;
 }
 
-/** The plan column to highlight: "pro", "max" (Max and Business) or "" (Entry). */
+/** The plan column to highlight: "pro", "max" (Max and Business) or "" (Basic). */
 export function currentColumn(t) {
   const k = tierKey(t);
   return k === "pro" ? "pro" : rank[k] >= rank.max ? "max" : "";

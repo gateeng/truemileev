@@ -7,12 +7,12 @@
 // Modules are loaded with import() so a stale file left in the browser cache (GitHub Pages caches
 // for up to ten minutes) shows one "Reload to finish" banner instead of a blank page.
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 const LIB = ["api", "tz", "units", "format", "periods", "rows", "metrics", "compare", "gates", "board", "dom",
   "journeys", "stops", "route", "tripdetail", "curve", "svgchart", "series", "csv", "printmodel", "taxreport",
   "route_hash", "theme", "icons", "plans", "insights", "finance", "chargefilter", "mapdata", "tripfilter",
-  "reportdesign"];
+  "reportdesign", "launch", "recovery"];
 const VIEWS = ["tilegrid", "rangebar", "typefilter", "carfilter", "account", "garage", "settings", "financial",
   "charges", "charge", "charts", "map_section", "mapview", "trips", "trip", "journeys", "journey", "report",
   "print"];
@@ -228,6 +228,179 @@ function wireSignIn() {
   };
   $("emailBtn").addEventListener("click", go);
   $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+  wireReset();
+}
+
+// ── forgot password: the app's code flow ─────────────────────────────────────────────────────
+// The rules and every sentence are lib/recovery.js's (a port of the app's PasswordRecoveryFlow); the
+// three calls are lib/api.js's. Step 1 emails a code. Step 2 takes the code and the new password
+// together: the password is checked first, so a too-short one never spends the single-use code; a
+// right code gives a session that is held HERE, in memory, and becomes this tab's sign-in only when
+// the new password is saved (api.auth.finishPasswordReset). Leaving the flow drops it.
+
+const reset = { email: "", resendAtMs: 0, verified: null, busy: false, timer: 0 };
+
+function resetMsg(text, kind = "err") {
+  const m = $("resetMsg");
+  m.innerHTML = "";
+  if (!text) return;
+  const d = document.createElement("div");
+  d.className = `msg ${kind}`;
+  d.textContent = text;
+  m.appendChild(d);
+}
+
+function resetBusy(on) {
+  reset.busy = on;
+  for (const id of ["resetSendBtn", "resetSaveBtn", "resetHaveCodeBtn", "resetOtherEmailBtn"]) $(id).disabled = on;
+  resendTick();
+}
+
+/** The "Send a new code (42 s)" countdown; the timer runs only while there is something to count. */
+function resendTick() {
+  const left = L.recovery.secondsUntilResend(reset.resendAtMs, Date.now());
+  const b = $("resetResendBtn");
+  b.textContent = L.recovery.resendLabel(left);
+  b.disabled = reset.busy || left > 0;
+  if (left > 0 && !reset.timer) reset.timer = setInterval(resendTick, 1000);
+  if (left === 0 && reset.timer) { clearInterval(reset.timer); reset.timer = 0; }
+}
+
+function resetStep(step) {
+  show($("resetAsk"), step === "ask");
+  show($("resetCodeStep"), step === "code");
+  show($("resetCodeField"), step === "code" && !reset.verified);
+  if (step === "code") {
+    $("resetSentTo").textContent = reset.verified ? L.recovery.MSG_CODE_ACCEPTED : `Code sent to ${reset.email}`;
+    resendTick();
+  }
+}
+
+function clearResetFields() {
+  for (const id of ["resetCode", "newPassword", "newPassword2"]) $(id).value = "";
+}
+
+function openReset() {
+  reset.verified = null;
+  clearResetFields();
+  $("resetEmail").value = $("email").value.trim() || reset.email;
+  $("signInMsg").innerHTML = "";
+  resetMsg("");
+  show($("signIn"), false);
+  show($("reset"), true);
+  resetStep("ask");
+  $("resetEmail").focus();
+}
+
+/** Leave the flow: the held session (if any) is dropped, never adopted. */
+function closeReset() {
+  reset.verified = null;
+  clearResetFields();
+  resetMsg("");
+  show($("reset"), false);
+  showSignIn();
+}
+
+async function sendResetCode(email) {
+  // Enter on the email field bypasses the disabled button; a second request while one is out would
+  // pass the cooldown check (resendAtMs is set only when the first answers) and send two emails.
+  if (reset.busy) return;
+  const block = L.recovery.requestBlocker(email, reset.resendAtMs, Date.now());
+  if (block) { resetMsg(block); return; }
+  resetBusy(true);
+  resetMsg("");
+  try {
+    const o = await api.auth.requestPasswordReset(String(email).trim());
+    if (o.kind === "sent") {
+      reset.email = String(email).trim();
+      reset.verified = null;
+      reset.resendAtMs = Date.now() + L.recovery.RESEND_COOLDOWN_MS;
+      $("resetCode").value = "";
+      resetStep("code");
+      resetMsg(L.recovery.SENT_MESSAGE, "info");
+      $("resetCode").focus();
+    } else {
+      if (o.kind === "rate" && o.wait) reset.resendAtMs = Math.max(reset.resendAtMs, Date.now() + o.wait * 1000);
+      resetMsg(L.recovery.outcomeMessage(o));
+    }
+  } finally {
+    resetBusy(false);
+  }
+}
+
+async function saveNewPassword() {
+  if (reset.busy) return;
+  const code = L.recovery.sanitizeCode($("resetCode").value);
+  const pw = $("newPassword").value;
+  const block = L.recovery.submitBlocker({ code, password: pw, again: $("newPassword2").value, verified: !!reset.verified });
+  if (block) { resetMsg(block); return; }
+  resetBusy(true);
+  resetMsg("");
+  try {
+    if (!reset.verified) {
+      const v = await api.auth.verifyResetCode(reset.email, code);
+      if (v.kind !== "verified") { resetMsg(L.recovery.outcomeMessage(v)); return; }
+      reset.verified = v.session;
+      resetStep("code");
+    }
+    const u = await api.auth.finishPasswordReset(reset.verified, pw);
+    if (u.kind === "updated") {
+      reset.verified = null;
+      clearResetFields();
+      resetMsg("");
+      show($("reset"), false);
+      let me = null;
+      try { me = await api.auth.whoAmI(); } catch (_) { me = null; }
+      if (me) { await enter(me); return; }
+      showSignIn();
+      const m = $("signInMsg");
+      m.innerHTML = "";
+      const d = document.createElement("div");
+      d.className = "msg ok";
+      d.textContent = "Your new password is saved. Sign in with it.";
+      m.appendChild(d);
+      return;
+    }
+    if (u.kind === "expired") {
+      // The held session is gone: a new code is needed, and the code field comes back.
+      reset.verified = null;
+      $("resetCode").value = "";
+      resetStep("code");
+    }
+    resetMsg(L.recovery.outcomeMessage(u));
+  } finally {
+    resetBusy(false);
+  }
+}
+
+function wireReset() {
+  $("forgotBtn").addEventListener("click", openReset);
+  $("resetBackBtn").addEventListener("click", closeReset);
+  $("resetSendBtn").addEventListener("click", () => sendResetCode($("resetEmail").value));
+  $("resetEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") sendResetCode($("resetEmail").value); });
+  $("resetHaveCodeBtn").addEventListener("click", () => {
+    const email = $("resetEmail").value.trim();
+    if (!L.recovery.isPlausibleEmail(email)) { resetMsg(L.recovery.MSG_INVALID_EMAIL); return; }
+    reset.email = email;
+    reset.verified = null;
+    resetMsg("");
+    resetStep("code");
+    $("resetCode").focus();
+  });
+  $("resetResendBtn").addEventListener("click", () => sendResetCode(reset.email));
+  $("resetOtherEmailBtn").addEventListener("click", () => {
+    reset.verified = null;
+    clearResetFields();
+    resetMsg("");
+    resetStep("ask");
+    $("resetEmail").focus();
+  });
+  $("resetCode").addEventListener("input", () => {
+    const clean = L.recovery.sanitizeCode($("resetCode").value);
+    if (clean !== $("resetCode").value) $("resetCode").value = clean;
+  });
+  $("resetSaveBtn").addEventListener("click", saveNewPassword);
+  $("newPassword2").addEventListener("keydown", (e) => { if (e.key === "Enter") saveNewPassword(); });
 }
 
 // ── signed in ─────────────────────────────────────────────────────────────────────────────────

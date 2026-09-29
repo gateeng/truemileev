@@ -7,7 +7,7 @@ import { dist, eff, economy, labels, isMetric, MPGE_FACTOR } from "./units.js";
 import { fixed, money, tripDuration } from "./format.js";
 import { aggregateEff } from "./rows.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 /** A metric with no data to stand on: an em-dash, never a zero that reads as a measurement. */
 export const NONE = "—";

@@ -31,7 +31,7 @@ import {
   buildPeriod, buildJourney, buildMileage, scopeJourneys, journeyRouteSvg, generatedOn,
 } from "./print.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 const DOCS = [
   { id: "period", label: "Period report", feature: "periodPrint", kind: "report" },

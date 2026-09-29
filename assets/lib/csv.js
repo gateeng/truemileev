@@ -7,7 +7,7 @@ import { dist, speed, eff, temp, labels } from "./units.js";
 import { dateFmt } from "./format.js";
 import { tripEff, isDc, carCell, classLabel } from "./rows.js";
 
-export const BUILD = "2026-09-27.3";
+export const BUILD = "2026-09-29.2";
 
 // ── Java-compatible "%.nf" ────────────────────────────────────────────────────────────────────
 function incDigits(s) {

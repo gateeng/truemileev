@@ -1,5 +1,8 @@
 // TrueMile EV — the public page: theme, splash, and the 3D carousel of app screens.
-// No dependency of any kind; every icon below is drawn inline for the same reason.
+// No outside dependency; every icon below is drawn inline for the same reason. Loaded as a module:
+// whether the watch and Android Auto are marked "soon" comes from lib/launch.js (both ship on launch day).
+
+import { LAUNCH } from "./lib/launch.js";
 
 (function () {
   const $  = (s, r) => (r || document).querySelector(s);
@@ -66,18 +69,18 @@
       bullets: ["Filter by vehicle, category, date range", "CSV, period PDF, mileage PDF", "Business report with verification page"],
     },
     {
-      key: "wear", label: "Wear", color: "var(--c-wear)",
+      key: "wear", label: "Wear", color: "var(--c-wear)", soon: LAUNCH.watchSoon,
       headline: "Your car, on your wrist",
       lede: "What the car knows shouldn't be stuck in a phone at the bottom of a bag.",
-      detail: "The watch mirrors the phone: state of charge, range remaining, and the drive being recorded right now, updating as you go. When the drive ends it holds on to where the car stopped, so finding it again in a packed lot is a glance and a walk. Nothing to start, nothing to stop — same as the phone.",
-      bullets: ["Charge and range on your wrist", "The drive in progress, live", "Walk back to where you parked"],
+      detail: "The Wear OS app shows what the phone knows: battery and range, today's drives and what they cost, and your lifetime totals. Plug in and it turns into a charging face with the charge climbing; park, and Find My Car points you back to where the car stopped. A tile and a watch-face complication keep the numbers a glance away. It comes from Google Play with the phone app, and it is part of Max.",
+      bullets: ["Battery and range on your wrist", "The charge in progress", "Find My Car", "A tile and a complication"],
     },
     {
-      key: "auto", label: "Auto", color: "var(--c-auto)", soon: true,
+      key: "auto", label: "Auto", color: "var(--c-auto)", soon: LAUNCH.autoSoon,
       headline: "Android Auto",
-      lede: "The same drive data on the car's own screen — not released yet.",
-      detail: "Built and running, waiting on release: charge, range and the drive in progress on the head unit, with the places you charge as points of interest. It ships when the phone app leaves closed testing.",
-      bullets: ["Coming after closed testing", "Charge and range on the dash", "Your chargers as places"],
+      lede: "Find a charger and watch the charge, on the car's own screen.",
+      detail: "With your phone on Android Auto, TrueMile lists charging locations near you and the places you have bookmarked. Open one for the station's details, and a tap starts navigation, without picking up the phone. While the truck charges, the car shows the charge live: rate, energy received and battery. A Max feature.",
+      bullets: ["Charging locations", "Bookmarks", "Station details", "Navigation", "The live charging screen"],
     },
   ];
 
@@ -90,6 +93,8 @@
     report: '<rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>',
     wear: '<rect x="7" y="6" width="10" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 6V3h6v3M9 18v3h6v-3" fill="none" stroke="currentColor" stroke-width="2"/>',
     auto: '<path d="M5 16V11l2-5h10l2 5v5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="16" r="2"/><circle cx="16" cy="16" r="2"/><path d="M3 16h18" fill="none" stroke="currentColor" stroke-width="2"/>',
+    gear: '<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.4 5-.1-3 2-1.6-2-3.4-2.4 1a8 8 0 0 0-2.6-1.5L15 2.5h-4l-.4 2.5A8 8 0 0 0 8 6.5l-2.4-1-2 3.4 2 1.6a8 8 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a8 8 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a8 8 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.6z"/>',
+    chev: '<path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/>',
   };
   const svg = (k, cls) =>
     `<svg viewBox="0 0 24 24" fill="currentColor" class="${cls || ""}" aria-hidden="true">${ICON[k]}</svg>`;
@@ -111,29 +116,52 @@
   //
   // A path that 404s is remembered, because the centred screen re-renders every few seconds as it
   // cycles and an unremembered miss would fetch the same missing file again on every tick.
+  // [paths] replaces the per-theme names for a screen that has one fixed capture (the car's).
   const missing = new Set();
-  const framed = (key, i, drawn, cls) => `
-    <img class="shot" alt="" loading="lazy" data-try="${shot(key, i)}|${shot(key, null)}">
+  const framed = (key, i, drawn, cls, paths) => `
+    <img class="shot" alt="" loading="lazy" data-try="${(paths || [shot(key, i), shot(key, null)]).join("|")}">
     <div class="fallback ${cls || "screen"}">${drawn}</div>`;
+
+  // A phone frame takes the shape of the screenshot it shows. The captures are 540 wide but of
+  // different heights (the tour crops the status bar and, on some screens, more), and a fixed frame
+  // left a strip under the shorter ones that lifted the app's bottom bar off the frame's bottom edge
+  // (owner 9/29). Fitted, the frame is the picture plus the bezel, so the bottom bar sits on the
+  // bottom edge. Which files have loaded is remembered: Charge and Map re-render every few seconds
+  // as they cycle, and a known file fits the new frame before the (cached) image even reports in.
+  const loaded = new Set();
+  function fit(img, path) {
+    if (!loaded.has(path)) return;
+    const phone = img.closest(".phone");
+    if (phone) phone.classList.add("fit");
+    const f = img.parentNode.querySelector(".fallback");
+    if (f) f.style.display = "none";
+  }
 
   function wireShots(root) {
     $$(".shot", root).forEach(img => {
       const paths = img.dataset.try.split("|").filter((p, i, a) => a.indexOf(p) === i && !missing.has(p));
       if (!paths.length) { img.remove(); return; }
       let at = 0;
-      img.onload = () => { const f = img.parentNode.querySelector(".fallback"); if (f) f.style.display = "none"; };
+      img.onload = () => { loaded.add(paths[at]); fit(img, paths[at]); };
       img.onerror = () => {
         missing.add(paths[at]);
         if (++at < paths.length) img.src = paths[at]; else img.remove();
       };
+      fit(img, paths[0]);
       img.src = paths[0];
     });
   }
 
   // ── the drawn screens (the fallback, and what shows until screenshots land) ────────────────
+  // The app's own bottom bar: the connection bolt on the left, the five labelled tabs with the current
+  // one in its colour's pill, the Settings gear on the right - so a drawn screen (Live, until its
+  // capture lands) reads like the photographed ones.
+  const TAB = { board: "Board", charge: "Charge", live: "Live", map: "Map", report: "Report" };
   const navbar = (on) => `<div class="navbar">` +
-    ["board", "charge", "live", "map", "report"]
-      .map(k => `<span style="${k === on ? "color:var(--c-" + k + ")" : ""}">${svg(k)}</span>`).join("") + `</div>`;
+    `<span class="nb-end">${svg("charge")}</span>` +
+    Object.keys(TAB).map(k => `<span class="nb-tab${k === on ? " on" : ""}" style="--c:var(--c-${k})">` +
+      `${svg(k)}<i>${TAB[k]}</i></span>`).join("") +
+    `<span class="nb-end">${svg("gear")}</span></div>`;
 
   const inner = (on, body) => `
       <div class="status"><span>7:04</span><span>5G</span></div>
@@ -247,30 +275,28 @@
     wear: () => `<div class="watch"><div class="face" style="position:relative;overflow:hidden">
         ${framed("wear", null, `
           <div style="font-size:27px;font-weight:800;color:var(--green)" data-n="wsoc">78%</div>
-          <div style="font-size:9px;color:var(--muted)">212 mi range</div>
+          <div style="font-size:9px;color:var(--muted)">212 mi est</div>
           <div style="height:1px;width:64px;background:var(--line);margin:5px 0"></div>
           <div style="font-size:11px;font-weight:700" data-n="wmi">14.6 mi</div>
-          <div style="font-size:8px;color:var(--muted)">drive in progress</div>`,
+          <div style="font-size:8px;color:var(--muted)">today</div>`,
           "screen")}
       </div></div>`,
 
-    // The car's own screen, not a phone (owner 9/18).
+    // The car's own screen, not a phone (owner 9/18). What ships on launch day is the production car
+    // app (CAR_FULL_SCOPE=false): its menu is Charging Locations and Bookmarks, plus Charging while the
+    // truck charges; the rows and their subtitles are auto/poi/PoiScreens.kt's. No live dashboard.
+    // A Desktop Head Unit capture of that menu replaces the drawing once it is in assets/shots/
+    // (shots/README.md: car-launch-menu.png).
     auto: () => `<div class="head"><div class="unit">
         <div class="vents"><i></i><i></i></div>
         <div class="display" style="margin-top:6px;position:relative">
           ${framed("auto", null, `
-            <div class="hbar">${svg("board")}${svg("charge")}${svg("map")}
-              <span style="margin-left:auto;font-size:7px;color:var(--dim)">ANDROID AUTO</span></div>
-            <div style="flex:1;position:relative">
-              <div class="mapbg"></div>
-              <span class="pin" style="background:var(--green);left:44%;top:46%"></span>
-              <div style="position:absolute;left:5px;top:5px;display:flex;gap:4px">
-                <span class="t"><span class="k">charge</span><span class="v green" style="font-size:10px">78%</span></span>
-                <span class="t"><span class="k">range</span><span class="v" style="font-size:10px">212 mi</span></span>
-              </div>
-              <div style="position:absolute;right:5px;bottom:5px" class="t">
-                <span class="k" style="color:var(--c-auto)">coming soon</span></div>
-            </div>`, "screen")}
+            <div class="hbar"><span class="aa-title">TrueMile</span></div>
+            <div class="aa-list">
+              <div class="aa-row"><span><b>Charging Locations</b><i>Chargers near you</i></span>${svg("chev")}</div>
+              <div class="aa-row"><span><b>Bookmarks</b><i>Saved places</i></span>${svg("chev")}</div>
+              <div class="aa-row"><span><b>Charging</b><i>Live rate, received and battery</i></span>${svg("chev")}</div>
+            </div>`, "screen", ["assets/shots/car-launch-menu.png"])}
         </div>
       </div></div>`,
   };
