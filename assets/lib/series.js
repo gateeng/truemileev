@@ -5,9 +5,10 @@
 import { periodWindow, rangeValueLabel } from "./periods.js";
 import { tileAggregate } from "./metrics.js";
 import { temp } from "./units.js";
+import { isEnergyMeasured } from "./rows.js";
 import { dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 export const BUCKETS = ["day", "week", "month", "year"];
 export const BUCKET_LABELS = { day: "Day", week: "Week", month: "Month", year: "Year" };
@@ -119,11 +120,11 @@ export function cumulative(values) {
   return (values || []).map((v) => { if (typeof v === "number" && Number.isFinite(v)) s += v; return s; });
 }
 
-/** Pooled efficiency over several aggregates (Σ measured miles / Σ net, EFF floors) or null. */
+/** Pooled efficiency over several aggregates (Σ energy-measured miles / Σ net, EFF floors) or null. */
 export function pooledEff(trips) {
   let miles = 0, used = 0, regen = 0;
   for (const t of trips || []) {
-    if (t.isReconciled) continue;
+    if (!isEnergyMeasured(t)) continue;
     miles += (t.hwyMi || 0) + (t.localMi || 0); used += t.usedKwh || 0; regen += t.regenKwh || 0;
   }
   const net = Math.max(used - regen, 0);

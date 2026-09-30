@@ -7,7 +7,7 @@
 // de-duplication across overlapping windows, 5 % SoC buckets, median/min/max, peak, holds-80 %, half power
 // and the three pack-temperature bands. Curve rows are matched by TIME, never by session_id.
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 export const HALF_HOUR_MS = 30 * 60_000;
 export const MAX_SESSIONS = 12;

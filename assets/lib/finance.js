@@ -12,10 +12,10 @@
 // - The Charge section's extra tiles (fast sessions, home share, average session, fees).
 
 import { isHomeNetwork } from "./stops.js";
-import { isDc, aggregateEff } from "./rows.js";
+import { isDc, aggregateEff, isEnergyMeasured } from "./rows.js";
 import { parts, fromLocal, addMonths } from "./tz.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const DAY = 86_400_000;
@@ -178,7 +178,8 @@ export function monthTable(ownTrips, charges, zone, fuel = {}, towCap = 0, limit
     let miles = 0, used = 0, tripCost = 0, mMiles = 0, mUsed = 0, mRegen = 0;
     for (const t of m.trips) {
       miles += num(t.miles); used += num(t.usedKwh); tripCost += num(t.cost);
-      if (t.isReconciled) continue;
+      // The month's mi/kWh: energy-measured drives only (Efficiency.isEnergyMeasured).
+      if (!isEnergyMeasured(t)) continue;
       mMiles += num(t.miles); mUsed += num(t.usedKwh); mRegen += num(t.regenKwh);
     }
     let chargeCost = 0, chargeMiles = 0;

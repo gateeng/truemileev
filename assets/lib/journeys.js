@@ -8,8 +8,9 @@
 
 import { parts, daysBetween } from "./tz.js";
 import { tripDuration } from "./format.js";
+import { isEnergyMeasured } from "./rows.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const EN_DASH = "–";
@@ -24,7 +25,8 @@ export function displayName(journeyId, name) {
   return "Journey " + (i >= 0 ? id.slice(i + 2) : id);
 }
 
-/** Efficiency.aggregate over ALL of a journey's trips (reconstructed included, DB:1637); 0 when degenerate. */
+/** Efficiency.aggregate over Σ sums (JourneySummary.miPerKwh); 0 when degenerate. groupJourneys hands it the
+ *  journey's ENERGY-MEASURED sums only (isEnergyMeasured — the Room query's measuredMiles/Kwh/RegenKwh). */
 export function aggregateMiPerKwh(miles, used, regen) {
   const net = Math.max(used - regen, 0);
   return miles < 0.3 || net < 0.2 ? 0 : miles / net;
@@ -49,6 +51,7 @@ export function groupJourneys(trips) {
   for (const g of map.values()) {
     g.trips.sort((a, b) => (a.date - b.date) || (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0));
     let rawName = null, miles = 0, used = 0, cost = 0, dur = 0, regen = 0;
+    let effMiles = 0, effUsed = 0, effRegen = 0;   // the ratio's basis: energy-measured legs only
     let start = Infinity, end = -Infinity;
     for (const t of g.trips) {
       // SQL MAX over the non-null names (plain string compare); an empty name loses to any real one.
@@ -58,6 +61,9 @@ export function groupJourneys(trips) {
       cost += Number(t.cost) || 0;
       dur += Number(t.durationSec) || 0;
       regen += Number(t.regenKwh) || 0;
+      if (isEnergyMeasured(t)) {
+        effMiles += Number(t.miles) || 0; effUsed += Number(t.usedKwh) || 0; effRegen += Number(t.regenKwh) || 0;
+      }
       if (t.date < start) start = t.date;
       if (t.date > end) end = t.date;
     }
@@ -66,7 +72,7 @@ export function groupJourneys(trips) {
       name: displayName(g.id, rawName), rawName,
       trips: g.trips, start, end,
       tripCount: g.trips.length, miles, usedKwh: used, cost, durationSec: dur, regenKwh: regen,
-      miPerKwh: aggregateMiPerKwh(miles, used, regen),
+      miPerKwh: aggregateMiPerKwh(effMiles, effUsed, effRegen),
     });
   }
   // sortedForRail: newest first by start (stable for ties).

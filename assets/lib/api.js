@@ -31,7 +31,7 @@ import {
 /** Re-exported: the door-jamb keys api.garage() selects (never the VIN, raw OCR or confidence). */
 export { JAMB_KEYS };
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 const REST_TABLES = ["vehicles", "trip_log", "charge_session", "phantom_losses", "trip_notes",
   "user_settings", "charge_curve_log", "tax_reports", "tire_records", "dtc_scans"];

@@ -14,7 +14,7 @@
 // The page asks for the code AND the new password on one screen, and checks the password before the
 // code is spent: a too-short password never burns a single-use code.
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** GoTrue's email code is 6 digits by default and configurable up to 10 (PasswordRecoveryFlow). */
 export const CODE_MIN_LENGTH = 6;

@@ -17,7 +17,7 @@ import { pointFeatures } from "../lib/mapdata.js";
 import { unconfirmedChip, backToChargesHref, homePinsOn } from "./charges.js";
 import { mountMap } from "./mapview.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 const UNCONFIRMED_TEXT = "Start mileage or arrival charge was left as suggested and never confirmed. It counts in totals, not in averages.";
 

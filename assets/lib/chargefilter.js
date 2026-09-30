@@ -17,7 +17,7 @@ import { parts } from "./tz.js";
 import { networkKey, networkFold, networkLabel } from "./finance.js";
 import { pointFeatures, PIN } from "./mapdata.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 export const SPEEDS = ["fast", "slow"];
 export const KINDS = ["home", "public"];

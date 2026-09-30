@@ -5,9 +5,9 @@
 
 import { dist, eff, economy, labels, isMetric, MPGE_FACTOR } from "./units.js";
 import { fixed, money, tripDuration } from "./format.js";
-import { aggregateEff } from "./rows.js";
+import { aggregateEff, isEnergyMeasured } from "./rows.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** A metric with no data to stand on: an em-dash, never a zero that reads as a measurement. */
 export const NONE = "—";
@@ -63,28 +63,30 @@ export function emptyAgg() {
 
 /**
  * tileAggregate (RTA:18-73). [trips] arrive filtered the way the tiles filter (own drives, type
- * filter, window); [charges] are never type- or car-filtered. Totals keep every row; mi/kWh, MPGe and
- * every time figure use only the measured (not reconstructed) drives. Always pooled Σ/Σ.
+ * filter, window); [charges] are never type- or car-filtered. Totals keep every row; every time figure
+ * uses only the measured (not reconstructed) drives, and mi/kWh and MPGe only the energy-measured ones
+ * (isEnergyMeasured: a drive with no energy at all is out). Always pooled Σ/Σ.
  * movingSec is not in the cloud (no moving_sec column), so on the web it stays 0 and the Moving tile
  * reads "—"; the code reads t.movingSec anyway so the day the column lands nothing else changes.
  */
 export function tileAggregate(trips, charges) {
   const a = emptyAgg();
-  let mUsed = 0, mRegen = 0;
+  let effMiles = 0, mUsed = 0, mRegen = 0;
   for (const t of trips) {
     a.tripCount++;
     a.totalMiles += t.miles;
     a.totalKwhUsed += t.usedKwh;
     a.totalCost += t.cost;
+    // The RATIO divides energy-measured drives only (Efficiency.isEnergyMeasured); time figures and
+    // measuredMiles (the speed basis) keep every recorded drive.
+    if (isEnergyMeasured(t)) { effMiles += t.miles; mUsed += t.usedKwh; mRegen += t.regenKwh; }
     if (t.isReconciled) continue;
     a.measuredMiles += t.miles;
-    mUsed += t.usedKwh;
-    mRegen += t.regenKwh;
     a.elapsedSec += t.durationSec;
     const mv = t.movingSec || 0;
     if (mv > 0) { a.movingSec += mv; a.movingTripCount++; }
   }
-  a.avgMiKwh = aggregateEff(a.measuredMiles, mUsed, mRegen) ?? 0;
+  a.avgMiKwh = aggregateEff(effMiles, mUsed, mRegen) ?? 0;
   a.avgMpge = a.avgMiKwh * MPGE_FACTOR;
   for (const c of charges) {
     a.chargeCount++;

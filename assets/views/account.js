@@ -17,7 +17,7 @@ import {
 } from "../lib/plans.js";
 import { LAUNCH, guaranteeLine } from "../lib/launch.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 // Shown in every delete dialog, whatever the plan looks like here: delete_account never calls Google
 // Play, so a live subscription keeps renewing after the account is gone. The menu path is kept to what

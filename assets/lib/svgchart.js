@@ -5,7 +5,7 @@
 // nothing is ever zero-filled. API frozen in SPEC 7.1; optional extras are marked "extension".
 import { fixed, dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 const FONT = 11;                 // px in viewBox units
 const CHAR_W = FONT * 0.6;       // rough width of one glyph (system sans), for layout only

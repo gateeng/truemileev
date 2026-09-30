@@ -18,7 +18,7 @@ import { distText, vehicleNames, groupByDay, dayGroupsHtml, backToJourneysHref }
 import { sessionRowHtml } from "./charges.js";
 import { mountMap } from "./mapview.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 export function mount(el, ctx) {
   const backHref = backToJourneysHref();

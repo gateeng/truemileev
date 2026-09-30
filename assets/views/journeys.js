@@ -12,7 +12,7 @@ import { groupJourneys, rangeLabel, metaLabel, journeyYears, inYear } from "../l
 import { icon } from "../lib/icons.js";
 import { distText, vehicleNames } from "./trips.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** A journey's detail route (the vehicle rides along: the same id can exist on two vehicles). */
 export function journeyHref(j) {

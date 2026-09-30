@@ -23,7 +23,7 @@
 //    except other EVs, and those have a volunteer beta (the product page's #beta section).
 // The internal accounting words never appear here (web/tests/wording_test.js checks every file).
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** The support address (mailto only; the page itself sends nothing anywhere). */
 export const SUPPORT_EMAIL = "support@gateeng.com";

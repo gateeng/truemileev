@@ -8,7 +8,7 @@ import { eff, speed, economy, perDist, labels } from "./units.js";
 import { fixed } from "./format.js";
 import { allows, lockText } from "./gates.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 export const TAG = "ALL TIME";
 export const DEFAULT_MPG = 25;

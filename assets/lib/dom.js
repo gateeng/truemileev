@@ -5,7 +5,7 @@
 import { lockText } from "./gates.js";
 import { icon } from "./icons.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** The icon helper, re-exported so a view needs one import for markup (lib/icons.js icon()). */
 export { icon as iconHtml };

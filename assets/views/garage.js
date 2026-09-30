@@ -14,7 +14,7 @@ import { h, render, raw, iconHtml, lockNote } from "../lib/dom.js";
 import { allows, trailerLimit } from "../lib/gates.js";
 import { dateFmt, fixed, money, grouped } from "../lib/format.js";
 import { dist, labels, eff as effUnits, pressure, psiFromKpa, isMetric } from "../lib/units.js";
-import { inScope, vehicleLabel, isHome, aggregateEff, tireOrder } from "../lib/rows.js";
+import { inScope, vehicleLabel, isHome, aggregateEff, isEnergyMeasured, tireOrder } from "../lib/rows.js";
 import { boardParams, boardModel } from "../lib/board.js";
 import { lineChart } from "../lib/svgchart.js";
 import { learnDcCurve } from "../lib/curve.js";
@@ -25,7 +25,7 @@ import * as trips from "./trips.js";
 import * as chargesView from "./charges.js";
 import * as charts from "./charts.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 export const TABS = [
   { key: "vehicle", label: "Vehicle", icon: "directions_car" },
@@ -286,7 +286,7 @@ export function mount(el, ctx) {
 
     const tows = own.filter((t) => t.towLbs > 0).sort((a, b) => b.date - a.date || (a.id < b.id ? 1 : -1));
     const rest = own.filter((t) => !(t.towLbs > 0));
-    const effOf = (list) => { let m = 0, u = 0, r = 0; for (const t of list) { if (t.isReconciled) continue; m += t.miles; u += t.usedKwh; r += t.regenKwh; } return aggregateEff(m, u, r); };
+    const effOf = (list) => { let m = 0, u = 0, r = 0; for (const t of list) { if (!isEnergyMeasured(t)) continue; m += t.miles; u += t.usedKwh; r += t.regenKwh; } return aggregateEff(m, u, r); };
     const eTow = effOf(tows), eRest = effOf(rest);
     const link = allows(tier, "tripDetail");
     const costOk = allows(tier, "costAnalytics");

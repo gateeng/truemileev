@@ -7,7 +7,7 @@
 import { dist, labels } from "./units.js";
 import { fixed, dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const str = (v) => (v === null || v === undefined ? "" : String(v));
@@ -23,6 +23,20 @@ export const isDegenerate = (miles, net) => miles < MIN_MILES || net < MIN_NET_K
 export function aggregateEff(sumMiles, sumUsed, sumRegen) {
   const net = netKwh(sumUsed, sumRegen);
   return isDegenerate(sumMiles, net) ? null : sumMiles / net;
+}
+/** Efficiency.ENERGY_MEASURED_MIN_KWH (= rollup.ts ENERGY_MEASURED_MIN_KWH): the least energy FLOW
+ *  (used + regen) a drive carries to count as carrying energy. */
+export const ENERGY_MEASURED_MIN_KWH = MIN_NET_KWH;
+/**
+ * Efficiency.isEnergyMeasured (= rollup.ts isEnergyMeasured): the drive belongs in an EFFICIENCY ratio —
+ * recorded (not reconstructed) and carrying energy (used + regen, so a downhill drive with regen ≥ used
+ * stays in, and a stored GPS-only estimate counts like a reading). A GPS-only drive with no stored estimate
+ * (used = regen = 0) has real miles and no energy; its miles over the other drives' kWh inflated every
+ * window ratio (100 mi on 40 kWh plus a 20-mi drive with no energy read 3.0 mi/kWh, not 2.5). Distance,
+ * time, counts and costs keep every drive.
+ */
+export function isEnergyMeasured(t) {
+  return !t.isReconciled && num(t.usedKwh) + num(t.regenKwh) >= ENERGY_MEASURED_MIN_KWH;
 }
 
 // ── Car status (OtherCar.kt, OtherCarCopy.kt) ─────────────────────────────────────────────────

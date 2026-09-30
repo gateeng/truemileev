@@ -15,7 +15,7 @@ import { startEpochOf } from "../lib/tripdetail.js";
 import { applyTripFilter, SORT_KEYS } from "../lib/tripfilter.js";
 import { icon } from "../lib/icons.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** sessionStorage key of the Map section's last hash (the detail pages' back link). */
 export const TRIPS_QUERY_KEY = "tm.tripsQuery";

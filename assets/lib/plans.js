@@ -8,7 +8,7 @@
 import { tierOf, rank } from "./gates.js";
 import { LAUNCH, priceLine } from "./launch.js";
 
-export const BUILD = "2026-09-30.1";
+export const BUILD = "2026-09-30.2";
 
 /** The app's Google Play store listing. */
 export const PLAY_LISTING = "https://play.google.com/store/apps/details?id=com.gateengineering.truemileev";
