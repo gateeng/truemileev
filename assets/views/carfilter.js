@@ -4,7 +4,7 @@
 
 import { h, render } from "../lib/dom.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const CAR_VALUES = ["all", "other", "ask"];
 

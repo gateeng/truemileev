@@ -7,7 +7,7 @@ import { h, render, raw, iconHtml } from "../lib/dom.js";
 import { RANGES, LABELS, steppable as canStep, tileWindow, rangeValueLabel } from "../lib/periods.js";
 import { ymd, parseYmd } from "../lib/tz.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 /**
  * mountRangeBar(el, {range, off, from, to, nowMs, zone, allowCustom = true, steppable = true}, onChange)

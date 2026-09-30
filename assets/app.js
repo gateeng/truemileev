@@ -7,7 +7,7 @@
 // Modules are loaded with import() so a stale file left in the browser cache (GitHub Pages caches
 // for up to ten minutes) shows one "Reload to finish" banner instead of a blank page.
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 const LIB = ["api", "tz", "units", "format", "periods", "rows", "metrics", "compare", "gates", "board", "dom",
   "journeys", "stops", "route", "tripdetail", "curve", "svgchart", "series", "csv", "printmodel", "taxreport",

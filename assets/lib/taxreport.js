@@ -9,7 +9,7 @@ import { dateFmt, } from "./format.js";
 import { fromLocal } from "./tz.js";
 import { jfix } from "./csv.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const BANNER = "Summary for your records. The verifiable report with its QR code is issued from the app.";
 

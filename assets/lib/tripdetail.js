@@ -6,7 +6,7 @@
 // check (TD:833-868), the attribution window for parked rows (TD:359-400, DB:708-711, DB:2190-2193)
 // and the same-day paging (TD:208-247).
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const DEFAULT_PACK_KWH = 131;
 const RETIRED_MILES = 0.005;

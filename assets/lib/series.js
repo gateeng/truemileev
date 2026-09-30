@@ -7,7 +7,7 @@ import { tileAggregate } from "./metrics.js";
 import { temp } from "./units.js";
 import { dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const BUCKETS = ["day", "week", "month", "year"];
 export const BUCKET_LABELS = { day: "Day", week: "Week", month: "Month", year: "Year" };

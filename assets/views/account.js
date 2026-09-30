@@ -15,16 +15,15 @@ import {
   planBadge, planTone, sourceLine, trialCard, comparisonRows, currentColumn, canUpgrade, managedInPlay,
   needsPlayWarning, planPrice, PLAY_LISTING, PLAY_SUBSCRIPTIONS,
 } from "../lib/plans.js";
-import { LAUNCH } from "../lib/launch.js";
+import { LAUNCH, guaranteeLine } from "../lib/launch.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
-/** The founder line for [left] places, or "" to show nothing (unknown, 0, or not a count). */
-export function founderLine(left) {
-  if (!Number.isInteger(left) || left <= 0) return "";
-  const n = Math.min(left, LAUNCH.founder.perVehicleType);
-  return `${LAUNCH.founder.title}: ${LAUNCH.founder.summary} ${n} of ${LAUNCH.founder.perVehicleType} places left for the ${LAUNCH.vehicles[0]}. ${LAUNCH.founder.lifetime}`;
-}
+// Shown in every delete dialog, whatever the plan looks like here: delete_account never calls Google
+// Play, so a live subscription keeps renewing after the account is gone. The menu path is kept to what
+// Google's help (answer 7018481, checked 9/29) confirms: it names Payments & subscriptions, no Profile step.
+export const PLAY_CANCEL_NOTE = "Deleting your account doesn't cancel a Google Play subscription. " +
+  "Cancel it in Google Play first (in the Google Play Store under Payments & subscriptions).";
 
 const ext = (href, text, cls = "") =>
   h`<a class="${cls}" href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
@@ -99,7 +98,6 @@ export function mount(el, ctx) {
         <p class="account-source">${sourceLine(tier)}</p>
         ${trial ? h`<div class="msg ${trial.state === "ended" || trial.state === "blocked" ? "warn" : "info"} account-trial">
             <b>${trial.title}</b><div>${trial.body}</div>${trial.note ? h`<div class="note">${trial.note}</div>` : ""}</div>` : ""}
-        <p class="note account-founder" aria-live="polite"></p>
         <h3 class="account-h">What your plan includes</h3>
         <div class="scroll account-compare">
           <table class="table">
@@ -110,6 +108,7 @@ export function mount(el, ctx) {
           </table>
         </div>
         <p class="note account-prices">${LAUNCH.priceNote}</p>
+        <p class="note account-guarantee">${guaranteeLine()}</p>
         ${canUpgrade(tier) ? h`<div class="account-upgrade">
             ${ext(PLAY_LISTING, h`${raw(iconHtml("workspace_premium", { size: 20 }))}<span>Upgrade in the TrueMile app</span>`, "btn primary")}
             <p class="note">Plans are bought through Google Play inside the app: open TrueMile → Settings → My account → Plans &amp; subscription. Your plan shows up here the next time you open this page.</p>
@@ -162,17 +161,6 @@ export function mount(el, ctx) {
   };
   el.addEventListener("click", onClick);
 
-  // ── Founder offer (launch 9/29: first 10 owners per vehicle type) ──────────────────────────
-  // One public count, read once per visit; nothing shows for a founder, in the demo, on a failure
-  // or at 0 (before launch the offer is off and reads 0 — never shown as "sold out").
-  const founderEl = $(".account-founder");
-  if (founderEl && !fixtures && !(tier && tier.founder)) {
-    api.founderPlacesLeft().then((left) => {
-      const line = founderLine(left);
-      if (alive && line) founderEl.textContent = line;
-    });
-  }
-
   // ── Session ────────────────────────────────────────────────────────────────────────────────
   const so = $(".account-signout");
   if (so) {
@@ -193,10 +181,10 @@ export function mount(el, ctx) {
     const body = document.createElement("div");
     body.className = "account-delete-dialog";
     render(body, h`
-      ${needsPlayWarning(tier) ? h`<div class="msg warn account-play">
-          <p>If you pay for your plan through Google Play, deleting your account does NOT cancel it — cancel it in Google Play first.</p>
-          ${ext(PLAY_SUBSCRIPTIONS, "Manage in Google Play")}
-        </div>` : ""}
+      <div class="msg ${needsPlayWarning(tier) ? "warn" : "info"} account-play">
+          <p>${PLAY_CANCEL_NOTE}</p>
+          ${ext(PLAY_SUBSCRIPTIONS, "Open Google Play subscriptions")}
+        </div>
       <p>This permanently deletes your account and all personal data from our servers — every trip, route, location, price and setting. An anonymized battery-health record stays with the vehicle's VIN (no identity, locations or costs — see the <a href="https://gateeng.com/truemile-privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>), and a one-way code that stores no VIN, no adapter address and no account is kept for up to 90 days so the introductory period can't be restarted on the same vehicle. Re-signing up starts from scratch.</p>
       <p class="note">The TrueMile app on your phone keeps its own copy until you delete the account there or uninstall the app. It will be signed out. Signing in again on that phone can upload that copy to a new account.</p>
       <label for="acct-confirm">Type ${word} to confirm.</label>

@@ -30,6 +30,7 @@
 .account-compare .account-cur{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .account-compare .account-price{font-weight:400;font-size:.78rem;white-space:normal;margin-top:2px;text-transform:none;letter-spacing:normal}
 .account-prices{margin:-6px 0 14px;max-width:70ch}
+.account-guarantee{margin:-6px 0 14px;max-width:70ch}
 .account-yes{color:var(--c-board);font-weight:800}
 .account-no{color:var(--dim)}
 .account-lim{white-space:normal!important;font-size:.86em}

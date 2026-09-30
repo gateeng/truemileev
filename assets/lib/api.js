@@ -8,8 +8,8 @@
 // READ-ONLY by construction, with two deliberate exceptions: request() checks every call against
 // ALLOWED before anything leaves the page. GET reaches the tables below, get_stats, the signed-in user
 // and the account's own report PDFs; POST reaches the auth endpoints (sign-in, sign-out and the
-// password reset's recover / verify), the read-only my_effective_tier and founder_slots_left functions
-// and the delete_account function; PUT reaches the signed-in user, for a new password only. No other
+// password reset's recover / verify), the read-only my_effective_tier function and the delete_account
+// function; PUT reaches the signed-in user, for a new password only. No other
 // method exists here. Row-level security would let a signed-in browser write to the tables, and a
 // write from here would skip the app's own date-ordered replays and fire server triggers, so the page
 // never writes a table.
@@ -31,7 +31,7 @@ import {
 /** Re-exported: the door-jamb keys api.garage() selects (never the VIN, raw OCR or confidence). */
 export { JAMB_KEYS };
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 const REST_TABLES = ["vehicles", "trip_log", "charge_session", "phantom_losses", "trip_notes",
   "user_settings", "charge_curve_log", "tax_reports", "tire_records", "dtc_scans"];
@@ -40,11 +40,6 @@ const REST_TABLES = ["vehicles", "trip_log", "charge_session", "phantom_losses",
 export const DELETE_PATH = "/functions/v1/delete_account";
 /** The word the reader types, and the function's whole request body ({"confirm": <word>}). */
 export const DELETE_CONFIRM_WORD = "DELETE";
-
-/** The founder offer's public, read-only count of places left (migration 0052; granted to anon). */
-export const FOUNDER_PATH = "/rest/v1/rpc/founder_slots_left";
-/** The server's key for the one supported vehicle (supabase/functions/_shared/founder.ts). */
-export const FOUNDER_MODEL = "ford_f150_lightning";
 
 /** Forgot password (the app's code flow): recover emails the code, verify trades it for a session,
  *  PUT on the user sets the new password. */
@@ -61,7 +56,7 @@ export const ALLOWED = Object.freeze({
     "/storage/v1/object/authenticated/reports/",
   ]),
   POST: Object.freeze(["/auth/v1/token", "/auth/v1/logout", RECOVER_PATH, VERIFY_PATH,
-    "/rest/v1/rpc/my_effective_tier", FOUNDER_PATH, DELETE_PATH]),
+    "/rest/v1/rpc/my_effective_tier", DELETE_PATH]),
   // The ONE write to the account itself: a new password, at the end of the reset (isPasswordBody).
   PUT: Object.freeze([USER_PATH]),
 });
@@ -678,7 +673,7 @@ export function tierFrom(row) {
   const r = Array.isArray(row) ? row[0] : row;
   if (!r || typeof r !== "object") {
     return { tier: "free", trialLive: false, trialDaysLeft: 0, trialTier: "", source: "", trialEndsMs: 0,
-      trialClosed: "", founder: false, serverNowMs: 0, unknown: row === null };
+      trialClosed: "", serverNowMs: 0, unknown: row === null };
   }
   const source = String(r.source ?? "").trim().toLowerCase();
   // The server's closing reason is an internal key: it is folded here into "abuse" (the vehicle already
@@ -692,8 +687,6 @@ export function tierFrom(row) {
     source,
     trialEndsMs: Math.max(0, Math.trunc(Number(r.trial_ends_epoch_ms) || 0)),
     trialClosed: !reason ? "" : reason.startsWith("abuse") ? "abuse" : "closed",
-    // 0052 adds promo_reason; only "founder" changes what the page says (no founder-offer line).
-    founder: String(r.promo_reason ?? "").trim().toLowerCase() === "founder",
     serverNowMs: Math.max(0, Math.trunc(Number(r.now_epoch_ms) || 0)),
     unknown: false,
   };
@@ -789,30 +782,6 @@ export function loadAccount() {
 }
 
 // ── on-demand reads ───────────────────────────────────────────────────────────────────────────
-
-/** founder_slots_left's reply (a bare number, or its JSON text) as a count; null for anything else. */
-export function parsePlacesLeft(v) {
-  if (typeof v !== "number" && typeof v !== "string") return null;
-  const t = String(v).trim().replace(/^"|"$/g, "");
-  if (t === "") return null;
-  const n = Number(t);
-  return Number.isInteger(n) && n >= 0 ? n : null;
-}
-
-/**
- * Founder places left for the supported vehicle: a public, read-only count (apikey only, no sign-in
- * token needed). null in fixture mode or on any failure; the page then shows nothing. 0 also shows
- * nothing: before launch the offer is off on the server and reads 0, which must never read "sold out".
- */
-export async function founderPlacesLeft(model = FOUNDER_MODEL) {
-  if (fixturesUrl) return null;
-  try {
-    const r = await request("POST", FOUNDER_PATH, { auth: false, body: { p_model: model } });
-    return parsePlacesLeft(await r.json());
-  } catch (_) {
-    return null;
-  }
-}
 
 /** gps_polyline per trip id, fetched 10 ids at a time and cached for the page's life ("" = none). */
 export async function tripRoutes(ids) {

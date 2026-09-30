@@ -208,7 +208,7 @@ footer{border-top:1px solid var(--line);margin-top:16px;padding:22px 0 40px;colo
   font-size:.9em;text-align:center}
 footer a{margin:0 7px;display:inline-block}
 
-/* ── launch: which car, plans, founder offer (the words: assets/lib/launch.js) ─── */
+/* ── launch: which car, plans, launch price guarantee (the words: assets/lib/launch.js) ─── */
 .launchline{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 20px;
   display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
 .launchline b{color:var(--ink)}
@@ -223,11 +223,11 @@ footer a{margin:0 7px;display:inline-block}
 .plan li{margin-bottom:4px}
 .plan-max{border-color:var(--c-auto)}
 .note{color:var(--muted);font-size:.88em}
-.founder{border-left:2px solid var(--amber);padding:2px 0 2px 14px;margin-top:18px}
-.founder b{display:block}
-.founder span{color:var(--muted);font-size:.95em;display:block}
-.founder ul{margin:6px 0;padding-left:1.1em;color:var(--muted);font-size:.92em}
-.founder .fine{font-size:.88em}
+.guarantee{border-left:2px solid var(--amber);padding:2px 0 2px 14px;margin-top:18px}
+.guarantee b{display:block}
+.guarantee span{color:var(--muted);font-size:.95em;display:block}
+.guarantee ul{margin:6px 0;padding-left:1.1em;color:var(--muted);font-size:.92em}
+.guarantee .fine{font-size:.88em}
 
 /* ── the web dashboard ── */
 .dash{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;

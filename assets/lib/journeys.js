@@ -9,7 +9,7 @@
 import { parts, daysBetween } from "./tz.js";
 import { tripDuration } from "./format.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const EN_DASH = "–";

@@ -4,7 +4,7 @@
 //   [data-launch-href="beta"] gets the beta sign-up mailto: link (subject and body template)
 //   [data-launch-href="dash"] gets the web dashboard's address
 //   #plans                   gets the three plan cards
-//   #founder                 gets the founder offer
+//   #guarantee               gets the launch price guarantee
 //   #betaSteps / #betaGets   get the beta's steps and what a tester gets
 //   #adapterList             gets the proven adapters
 // Importable without a DOM (the web tests call the builders directly).
@@ -25,14 +25,14 @@ export function plansHtml() {
     </div>`).join("");
 }
 
-/** The founder offer, as HTML. */
-export function founderHtml() {
-  const f = LAUNCH.founder;
+/** The launch price guarantee, as HTML. */
+export function guaranteeHtml() {
+  const g = LAUNCH.guarantee;
   return `
-    <b>${esc(f.title)}</b>
-    <span>${esc(f.summary)}</span>
-    <ul>${f.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
-    <span class="fine">${esc(f.lifetime)}</span>`;
+    <b>${esc(g.title)}</b>
+    <span>${esc(g.summary)}</span>
+    <ul>${g.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
+    <span class="fine">${esc(g.fine)}</span>`;
 }
 
 /** The beta's steps, as HTML list items (an <ol> on the page). */
@@ -61,7 +61,7 @@ export function fillLaunch(doc) {
   for (const a of doc.querySelectorAll('[data-launch-href="dash"]')) a.setAttribute("href", LAUNCH.dashboard.href);
   const fill = (id, html) => { const el = doc.getElementById(id); if (el) el.innerHTML = html; };
   fill("plans", plansHtml());
-  fill("founder", founderHtml());
+  fill("guarantee", guaranteeHtml());
   fill("betaSteps", betaStepsHtml());
   fill("betaGets", betaGetsHtml());
   fill("adapterList", adaptersHtml());

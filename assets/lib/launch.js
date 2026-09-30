@@ -7,9 +7,15 @@
 //  - Pro $5.99 / month or $59.99 / year, Max $10.99 / month or $99.99 / year (US Google Play prices; the
 //    app itself reads prices from Play at run time and never hardcodes them - only this web page does).
 //  - 14-day Max trial. The entry plan is called "Basic" (never the other word: the app is paid).
-//  - Founder offer (owner update 9/29): Max for the lifetime of the service for the first 10 owners of
-//    each supported vehicle type, with no total limit (the server enforces the same: migration 0052,
-//    app_config.founder_slots_per_model = 10).
+//  - Launch price guarantee (owner decision 9/29; it REPLACES the earlier "first 10 owners of each vehicle
+//    type" offer, which was never switched on - app_config.founder_enabled stays false and nothing grants
+//    from its tables): subscribe to Pro or Max on or before December 31, 2026 and the price does not go
+//    up while that subscription stays active. How it is kept (owner, not code): SEPARATE LAUNCH BASE
+//    PLANS. The four launch base plans (pro-monthly, pro-annual, max-monthly, max-annual) are never
+//    repriced; on Jan 1, 2027 (10:00 UTC or later) pro/max-2027-monthly/-annual open at the same prices,
+//    the launch plans are deactivated with Resubscribe off (pause stays off), and any later raise is on
+//    the 2027 plans only (docs/PLAY_LAUNCH_RUNBOOK.md, Price increases). The terms page
+//    (web/legal/truemile-terms) says the same.
 //  - Owner update 9/29: the Wear OS watch app ships WITH the phone app on launch day (production release
 //    alongside, wear 1101), and Android Auto ships with the charging features only (the production car
 //    build, CAR_FULL_SCOPE=false: charging locations, bookmarks, a station's details, navigation and the
@@ -17,12 +23,13 @@
 //    except other EVs, and those have a volunteer beta (the product page's #beta section).
 // The internal accounting words never appear here (web/tests/wording_test.js checks every file).
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 /** The support address (mailto only; the page itself sends nothing anywhere). */
 export const SUPPORT_EMAIL = "support@gateeng.com";
 
-const FOUNDER_PER_VEHICLE_TYPE = 10;
+/** The last day a new Pro or Max subscription gets the launch price guarantee. */
+const GUARANTEE_DEADLINE = "December 31, 2026";
 
 export const LAUNCH = Object.freeze({
   /** The public launch on Google Play. */
@@ -58,8 +65,8 @@ export const LAUNCH = Object.freeze({
     ]),
     fileNote: "The file carries your car's VIN, its readings from the test, any trouble codes and that day's drive log. Send it only to our support address; we use it to build support for your model.",
     gets: Object.freeze([
+      // One item since 9/29: the "first owners of your model get Max for life" line went with that offer.
       "Max while you test.",
-      `When your model launches, its first ${FOUNDER_PER_VEHICLE_TYPE} owners get Max for the lifetime of TrueMile EV (the founder offer, under Plans).`,
     ]),
     cta: "Email us to join",
     /** The sign-up email's body: a template the reader fills in (nothing about them is prefilled). */
@@ -125,19 +132,17 @@ export const LAUNCH = Object.freeze({
   }),
   priceNote: "US prices. Google Play shows the price in your currency before you buy, and the subscription renews until you cancel it in Google Play.",
 
-  /** The founder offer. */
-  founder: Object.freeze({
-    // The ONE number of the offer (there is no total cap). The summary below is built from it; the
-    // terms page (web/legal/truemile-terms) repeats it and web/tests/launch_test.js checks the two agree.
-    perVehicleType: FOUNDER_PER_VEHICLE_TYPE,
-    title: "Founder offer",
-    summary: `The first ${FOUNDER_PER_VEHICLE_TYPE} owners of each supported vehicle type get Max for the lifetime of TrueMile EV at no charge.`,
+  /** The launch price guarantee (for everyone who subscribes by the deadline). The terms page repeats the
+   *  deadline and web/tests/launch_test.js checks the two agree. */
+  guarantee: Object.freeze({
+    title: "Launch price guarantee",
+    deadline: GUARANTEE_DEADLINE,
+    summary: `Subscribe to Pro or Max on or before ${GUARANTEE_DEADLINE}, and your price won't go up for as long as that subscription stays active.`,
     rules: Object.freeze([
-      "One per car. The car's VIN must decode to that vehicle.",
-      "The car must have logged at least one real drive or charge through the OBD adapter.",
-      "First come, first served, in the order qualifying cars log that first drive or charge.",
+      "If it ends (for example, you cancel and the paid period runs out) and you subscribe again later, the price at that time applies.",
+      "Restoring a cancelled subscription in Google Play before it ends keeps it active.",
     ]),
-    lifetime: "Lifetime means for as long as TrueMile EV runs. If it ever closes, you get at least 90 days' notice and a full export of your data.",
+    fine: "Taxes and currency conversion are handled by Google Play.",
   }),
 });
 
@@ -145,6 +150,12 @@ export const LAUNCH = Object.freeze({
 export function priceLine(plan) {
   const p = LAUNCH.prices[String(plan || "").toLowerCase()];
   return p ? `${p.monthly} a month or ${p.yearly} a year` : "";
+}
+
+/** The launch price guarantee as one paragraph (the dashboard's Account → Plan card). */
+export function guaranteeLine() {
+  const g = LAUNCH.guarantee;
+  return `${g.title}: ${g.summary} ${g.rules.join(" ")} ${g.fine}`;
 }
 
 /** "Try every Max feature for 14 days." */

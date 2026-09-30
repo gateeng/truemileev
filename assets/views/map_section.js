@@ -32,7 +32,7 @@ import { mountTripList, saveTripsBackLink, distText, tripHref } from "./trips.js
 import { mountJourneyList } from "./journeys.js";
 import { mountMap } from "./mapview.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 /** The newest listed trips the routes map draws, and how many route polylines one request asks for. */
 export const ROUTES_MAX = 50;

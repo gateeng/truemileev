@@ -12,7 +12,7 @@ import { mode } from "../lib/api.js";
 import { esc } from "../lib/dom.js";
 import { styleUrl, blankStyle, tileRequest, PIN, WIDTHS } from "../lib/mapdata.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const MAP_FALLBACK_TEXT = "The map can't be shown in this browser.";
 const LIB_PATH = "../vendor/maplibre-gl-6.11.2/maplibre-gl.mjs";

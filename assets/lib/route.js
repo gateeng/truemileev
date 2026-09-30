@@ -7,7 +7,7 @@
 
 import { dist, labels } from "./units.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const R_MILES = 3958.7613;
 export const METERS_TO_FEET = 3.28084;

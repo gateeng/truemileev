@@ -28,7 +28,7 @@ import {
 } from "../lib/chargefilter.js";
 import { dcSessions, homeShare, avgSessionKwh, fees, networkKey } from "../lib/finance.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 /** sessionStorage: the list's last hash, so a session's back link returns to the same filters. */
 export const CHARGE_QUERY_KEY = "tm.chargeQuery";

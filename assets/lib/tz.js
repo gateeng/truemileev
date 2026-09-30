@@ -7,7 +7,7 @@
 // add(MONTH) clamps the day to the target month, and a local time that does not exist (the spring
 // DST gap) moves forward by the gap.
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const DAY_MS = 86_400_000;
 const Q = 900_000;                       // offsets only change on quarter hours in the modern tz database

@@ -18,7 +18,7 @@ import {
 } from "../lib/series.js";
 import { mountTypeFilter } from "./typefilter.js";
 
-export const BUILD = "2026-09-29.2";
+export const BUILD = "2026-09-30.1";
 
 export const CHARTS = [
   { id: "efficiency", label: "Efficiency" },
