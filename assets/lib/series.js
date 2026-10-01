@@ -8,7 +8,7 @@ import { temp } from "./units.js";
 import { isEnergyMeasured } from "./rows.js";
 import { dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 export const BUCKETS = ["day", "week", "month", "year"];
 export const BUCKET_LABELS = { day: "Day", week: "Week", month: "Month", year: "Year" };

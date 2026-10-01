@@ -26,7 +26,7 @@ import {
 } from "../lib/finance.js";
 import { emptyFilter, formatChargeFilter, formatNets } from "../lib/chargefilter.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 export const MEMBERSHIPS_KEY = "tm.memberships";
 const DAY = 86_400_000;
@@ -68,7 +68,7 @@ export function mountBoardCard(el, ctx, { title = "Board", pick = (m) => m.finan
       const m = boardModel(reply, ctx.units, ctx.tier);
       wrap(`<div class="financial-bgrid">${pick(m).map(boardItemHtml).join("")}</div><p class="note">${esc(BOARD_NOTE)}</p>`);
     }).catch((err) => {
-      if (alive) wrap(`<div class="msg err">The Board figures did not load: ${esc((err && err.message) || String(err))}</div>`);
+      if (alive) wrap(`<div class="msg err">${esc(api.boardStatsErrorText(err))}</div>`);
     });
   }
   if (!single) {

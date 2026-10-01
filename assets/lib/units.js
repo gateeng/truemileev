@@ -3,7 +3,7 @@
 // Every stored value is canonical imperial (mi, mph, °F, mi/kWh, MPGe, $/mi). Convert only at the
 // display or CSV cell, so a unit toggle can never leave a number in the old unit.
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** Units.KM_PER_MI (the display factor; Efficiency's 1.60934 is only for the kWh/100km cloud key). */
 export const MI_TO_KM = 1.609344;

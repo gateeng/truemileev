@@ -13,7 +13,7 @@ import { dateFmt } from "./format.js";
 import { listFor, typeKey, classLabel, isShort } from "./rows.js";
 import { MI_TO_KM } from "./units.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 const DAY = 86_400_000;
 

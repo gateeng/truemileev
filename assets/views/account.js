@@ -17,7 +17,7 @@ import {
 } from "../lib/plans.js";
 import { LAUNCH, guaranteeLine } from "../lib/launch.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 // Shown in every delete dialog, whatever the plan looks like here: delete_account never calls Google
 // Play, so a live subscription keeps renewing after the account is gone. The menu path is kept to what
@@ -185,7 +185,7 @@ export function mount(el, ctx) {
           <p>${PLAY_CANCEL_NOTE}</p>
           ${ext(PLAY_SUBSCRIPTIONS, "Open Google Play subscriptions")}
         </div>
-      <p>This permanently deletes your account and all personal data from our servers — every trip, route, location, price and setting. An anonymized battery-health record stays with the vehicle's VIN (no identity, locations or costs — see the <a href="https://gateeng.com/truemile-privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>), and a one-way code that stores no VIN, no adapter address and no account is kept for up to 90 days so the introductory period can't be restarted on the same vehicle. Re-signing up starts from scratch.</p>
+      <p>This permanently deletes your account and its data from our servers — your trips and routes, your charges with their locations and prices, your settings and your reports. A battery-health record keyed to the vehicle's VIN stays with the vehicle: it holds no name, email, account, locations or costs, but a VIN can identify a vehicle's owner, so it is not anonymous (see the <a href="https://gateeng.com/truemile-privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>; email us the VIN to have it deleted). A one-way code that stores no VIN, no adapter address and no account is kept for up to 90 days so the introductory period can't be restarted on the same vehicle. Community price contributions you made (a public station's location and price under a coded identifier, never your account) expire within 14 days, and the other short-lived records the Privacy Policy lists — crash reports, our host's request logs, backups and the deleted account's ID — roll off on its schedule. Re-signing up starts from scratch.</p>
       <p class="note">The TrueMile app on your phone keeps its own copy until you delete the account there or uninstall the app. It will be signed out. Signing in again on that phone can upload that copy to a new account.</p>
       <label for="acct-confirm">Type ${word} to confirm.</label>
       <input id="acct-confirm" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">

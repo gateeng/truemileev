@@ -3,7 +3,7 @@
 // The license ships at assets/vendor/material-icons-0.14.15/LICENSE.txt. Generated once from the
 // package's SVG files: each entry is the icon's inner markup (paths only) on a 0 0 24 24 viewBox.
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** name -> inner SVG markup (paths only; no links, no scripts, no handlers). */
 export const ICONS = Object.freeze({

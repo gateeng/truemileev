@@ -25,7 +25,7 @@ import * as trips from "./trips.js";
 import * as chargesView from "./charges.js";
 import * as charts from "./charts.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 export const TABS = [
   { key: "vehicle", label: "Vehicle", icon: "directions_car" },
@@ -414,7 +414,7 @@ export function mount(el, ctx) {
         <p class="note">As on your Board. The app reads these same figures.</p>`);
     }).catch((err) => {
       if (!alive || !box.isConnected) return;
-      render(box, h`${head}<div class="msg err">The Board figures did not load: ${err.message}</div>`);
+      render(box, h`${head}<div class="msg err">${api.boardStatsErrorText(err)}</div>`);
     });
   }
 

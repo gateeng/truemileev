@@ -9,10 +9,20 @@
 // Rules this file keeps:
 //   - The address is cleaned with history.replaceState the moment the script runs, before the page
 //     paints and before anything else reads it. This is a CLASSIC script in <head> for that reason.
-//   - Tokens are never kept: parse() reads only the link type and the error fields, and returns
-//     neither token. Nothing is stored (no storage, no cookie) and nothing is sent anywhere: this
-//     file makes no network call at all. Signing in happens in the app.
-//   - Text from the address (error_description) is shown with textContent only, and trimmed.
+//   - Tokens are never kept: parse() reads only the link type and the error codes, and returns
+//     neither token. Nothing is stored (no storage, no cookie) and this file makes no network call
+//     of its own. Signing in happens in the app.
+//   - The session a link hands over is ENDED, not just dropped (9/30 audit F15). replaceState rewrites
+//     only the current history entry, so the tokenized address can stay in the browser's history,
+//     and a Supabase refresh token does not expire by itself. When the address carried a session
+//     (a link that worked), capture() hands its access token to holdLinkToken() (in memory, never in
+//     the result) and this file loads link-session.js, a module that takes the token once
+//     (takeLinkToken) and ends that session on the server through lib/api.js: one
+//     POST /auth/v1/logout?scope=local, which ends that session only, never the account's others.
+//     A browser without modules still gets a clean address; only the sign-out is skipped.
+//   - No text from the address is ever shown. error_description is not even read: anyone can put
+//     any sentence in a link, and this page is on the real domain. The error CODE only picks one of
+//     the fixed messages below. Everything is set with textContent.
 //
 // Two modes, from the script tag's data-mode:
 //   "page"   (confirmed.html) — always cleans the address; always shows one message; applies the
@@ -35,7 +45,7 @@
     "expires_at", "token_type", "type", "error", "error_code", "error_description", "code", "token_hash", "sb",
   ];
   var EXPIRED_CODES = ["otp_expired", "access_denied"];
-  var MAX_DESCRIPTION = 200;
+  var MAX_CODE = 64;
 
   function fields(part) {
     var s = typeof part === "string" ? part : "";
@@ -54,72 +64,88 @@
     return isAuthPart(hash) || isAuthPart(search);
   }
 
-  function clean(text) {
-    var t = String(text == null ? "" : text).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
-    return t.length > MAX_DESCRIPTION ? t.slice(0, MAX_DESCRIPTION - 1).trimEnd() + "…" : t;
+  /** A code-like value from the address (an error code or a link type): one short token, else "". */
+  function codeOf(text) {
+    var t = String(text == null ? "" : text).trim().toLowerCase();
+    return t.length <= MAX_CODE && /^[a-z0-9_.-]+$/.test(t) ? t : "";
   }
 
+  /** A session access token (a JWT: three base64url parts, at most 8 KB) as Supabase appends it. */
+  var TOKEN_RE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+  /** The access token an auth return carries in [hash] or [search], or "" (never anything else). */
+  function linkToken(hash, search) {
+    var t = fields(hash).get("access_token") || fields(search).get("access_token") || "";
+    return t.length <= 8192 && TOKEN_RE.test(t) ? t : "";
+  }
+
+  // The token of the last link that worked, until link-session.js takes it (once). Only in memory.
+  var heldToken = "";
+  function holdLinkToken(token) { heldToken = String(token || ""); }
+  function takeLinkToken() { var t = heldToken; heldToken = ""; return t; }
+
   /**
-   * What the link's result was. Returns {kind, type, errorCode, description} and NEVER a token:
+   * What the link's result was. Returns {kind, type, errorCode} and NEVER a token, and never any text
+   * from the address beyond a short code:
    *   kind "confirmed" — the link worked (tokens or a code present, or a non-recovery type)
    *        "recovery"  — a password-reset link (that happens in the app, by code)
    *        "expired"   — error_code / error otp_expired or access_denied
-   *        "error"     — any other error; [description] is the server's text, trimmed
+   *        "error"     — any other error (an error_description alone counts, but is not read)
    *        "none"      — nothing an auth redirect appends
    */
   function parse(hash, search) {
     var h = fields(hash), q = fields(search);
     var pick = function (k) { return h.get(k) || q.get(k) || ""; };
-    var error = clean(pick("error")), errorCode = clean(pick("error_code"));
-    var description = clean(pick("error_description"));
-    var type = clean(pick("type")).toLowerCase();
-    if (error || errorCode || description) {
+    var rawError = pick("error"), rawCode = pick("error_code");
+    var error = codeOf(rawError), errorCode = codeOf(rawCode);
+    var type = codeOf(pick("type"));
+    if (rawError || rawCode || pick("error_description")) {
       var expired = EXPIRED_CODES.indexOf(errorCode) >= 0 || (!errorCode && EXPIRED_CODES.indexOf(error) >= 0);
-      return { kind: expired ? "expired" : "error", type: type, errorCode: errorCode || error, description: description };
+      return { kind: expired ? "expired" : "error", type: type, errorCode: errorCode || error };
     }
     var worked = !!(pick("access_token") || pick("refresh_token") || pick("code") || pick("token_hash") || type);
-    if (!worked) return { kind: "none", type: "", errorCode: "", description: "" };
-    return { kind: type === "recovery" ? "recovery" : "confirmed", type: type, errorCode: "", description: "" };
+    if (!worked) return { kind: "none", type: "", errorCode: "" };
+    return { kind: type === "recovery" ? "recovery" : "confirmed", type: type, errorCode: "" };
   }
 
   var GUIDANCE = "If you can sign in to TrueMile EV, your email is already confirmed. If not, open the app, " +
     "sign in with your email and follow the steps to get a new code.";
 
-  /** The words for [result]: {tone, title, lines[], detail}. [detail] is the server's text, or "". */
+  /** The words for [result]: {tone, title, lines[]}. Every word is fixed here; none comes from the address. */
   function message(result) {
     var kind = result && result.kind;
     if (kind === "confirmed") return {
       tone: "ok", title: "Email confirmed",
-      lines: ["Your email is confirmed. Open TrueMile EV on your phone and sign in."], detail: "",
+      lines: ["Your email is confirmed. Open TrueMile EV on your phone and sign in."],
     };
     if (kind === "expired") return {
       tone: "warn", title: "This link can't be used again",
-      lines: ["This link was already used or has expired. " + GUIDANCE], detail: "",
+      lines: ["This link was already used or has expired. " + GUIDANCE],
     };
     if (kind === "error") return {
       tone: "warn", title: "That link didn't work",
-      lines: [GUIDANCE], detail: (result && result.description) || "",
+      lines: [GUIDANCE],
     };
     if (kind === "recovery") return {
       tone: "info", title: "Password reset",
       lines: ["Passwords are reset in the app. Open TrueMile EV, tap Forgot password? and follow the steps to get a code."],
-      detail: "",
     };
     return {
       tone: "info", title: "Nothing to confirm here",
       lines: ["This page finishes the Confirm my email link from a TrueMile EV sign-up email. There is nothing to confirm right now."],
-      detail: "",
     };
   }
 
   /**
    * Read the address, clean it at once, then work out what it said. In "page" mode any hash or query is
    * removed; in "notice" mode only an address that carries auth fields is touched. Returns parse()'s
-   * result (no tokens), and whether the address was cleaned.
+   * result (no tokens), and whether the address was cleaned. When the link worked and handed over a
+   * session, [onToken] (optional) gets its access token, for ending it; the result never has it.
    */
-  function capture(loc, hist, mode) {
+  function capture(loc, hist, mode, onToken) {
     var hash = String((loc && loc.hash) || ""), search = String((loc && loc.search) || "");
     var auth = hasAuthParams(hash, search);
+    var token = auth ? linkToken(hash, search) : "";
     var cleaned = false;
     if (auth || (mode === "page" && (hash || search))) {
       var keepSearch = mode !== "page" && !isAuthPart(search);
@@ -129,6 +155,7 @@
       } catch (_) { /* no history API: nothing else to do */ }
     }
     var result = auth ? parse(hash, search) : parse("", "");
+    if (token && typeof onToken === "function" && (result.kind === "confirmed" || result.kind === "recovery")) onToken(token);
     return { result: result, cleaned: cleaned };
   }
 
@@ -147,6 +174,26 @@
     return a;
   }
 
+  /**
+   * Ends the held session: link-session.js when it is already here, else loads it (a module, from this
+   * script's own folder). Does nothing when no session is held.
+   */
+  var sessionModuleAdded = false;
+  function endHeldSession(doc, scriptSrc) {
+    if (!heldToken) return false;
+    var api = root.TMAuthLanding;
+    if (api && typeof api.endLinkSession === "function") { api.endLinkSession(); return true; }
+    if (sessionModuleAdded || !doc || !scriptSrc) return false;      // still loading: it takes the token when it runs
+    try {
+      var s = doc.createElement("script");
+      s.type = "module";
+      s.src = new URL("link-session.js", scriptSrc).href;
+      (doc.head || doc.documentElement).appendChild(s);
+      sessionModuleAdded = true;
+      return true;
+    } catch (_) { return false; }
+  }
+
   /** confirmed.html: fill #landing with the message for [result]. */
   function renderPage(doc, result) {
     var box = doc.getElementById("landing");
@@ -157,12 +204,6 @@
     box.setAttribute("data-kind", (result && result.kind) || "none");
     box.appendChild(el(doc, "h1", "", m.title));
     for (var i = 0; i < m.lines.length; i++) box.appendChild(el(doc, "p", i === 0 ? "lead" : "", m.lines[i]));
-    if (m.detail) {
-      var d = el(doc, "p", "detail");
-      d.appendChild(el(doc, "span", "k", "What the server said: "));
-      d.appendChild(el(doc, "span", "", m.detail));
-      box.appendChild(d);
-    }
     var links = el(doc, "div", "links");
     links.appendChild(link(doc, PRODUCT_URL, "About TrueMile EV", "btn primary"));
     links.appendChild(link(doc, "mailto:" + SUPPORT, SUPPORT, "btn"));
@@ -184,7 +225,6 @@
     box.setAttribute("data-kind", result.kind);
     box.appendChild(el(doc, "b", "", m.title));
     for (var i = 0; i < m.lines.length; i++) box.appendChild(el(doc, "span", "", m.lines[i]));
-    if (m.detail) box.appendChild(el(doc, "span", "detail", "What the server said: " + m.detail));
     var help = el(doc, "span", "help", "Questions? ");
     help.appendChild(link(doc, "mailto:" + SUPPORT, SUPPORT));
     box.appendChild(help);
@@ -217,14 +257,18 @@
     AUTH_KEYS: AUTH_KEYS.slice(), PRODUCT_URL: PRODUCT_URL, SUPPORT: SUPPORT, GUIDANCE: GUIDANCE,
     isAuthPart: isAuthPart, hasAuthParams: hasAuthParams, parse: parse, message: message,
     capture: capture, renderPage: renderPage, renderNotice: renderNotice, applyTheme: applyTheme,
+    linkToken: linkToken, holdLinkToken: holdLinkToken, takeLinkToken: takeLinkToken, endHeldSession: endHeldSession,
+    // link-session.js sets endLinkSession when it runs.
   };
 
   // ── run: clean the address first, render once the body exists ──────────────────────────────────
   if (typeof document === "undefined" || typeof window === "undefined") return;
   var script = document.currentScript;
   var mode = (script && script.getAttribute("data-mode")) === "page" ? "page" : "notice";
-  var captured = capture(window.location, window.history, mode);
+  var scriptSrc = (script && script.src) || "";
+  var captured = capture(window.location, window.history, mode, holdLinkToken);
   if (mode === "page") applyTheme(window, document);
+  endHeldSession(document, scriptSrc);
   var show = function () {
     if (mode === "page") renderPage(document, captured.result);
     else renderNotice(document, captured.result);
@@ -235,7 +279,8 @@
   // report that one too. (The product page's own anchors carry no auth field and are left alone.)
   window.addEventListener("hashchange", function () {
     if (mode !== "page" && !hasAuthParams(window.location.hash, window.location.search)) return;
-    captured = capture(window.location, window.history, mode);
+    captured = capture(window.location, window.history, mode, holdLinkToken);
+    endHeldSession(document, scriptSrc);
     if (mode !== "page") {
       var old = document.querySelector(".authnote");
       if (old && old.parentNode) old.parentNode.removeChild(old);

@@ -8,7 +8,7 @@ import { aggregateEff, netKwh } from "./rows.js";
 import { temp as tempUnits } from "./units.js";
 import { fixed } from "./format.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 export const DEFAULT_PACK_KWH = 131;
 

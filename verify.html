@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark"><head><meta charset="utf-8">
-<!-- Where the "Confirm my email" link of the sign-up email lands (the app sends this address as
-     redirect_to: AppConstants.kt CONFIRM_LANDING_URL). Supabase confirms the address before it
-     sends the browser here; this page only says how that went. assets/auth-landing.js removes what
-     Supabase appended to the address before anything paints, keeps no token and stores nothing.
-     When the link handed over a session, assets/link-session.js ends it on the server (one sign-out
-     request, lib/api.js), so a token left in the browser's history is already dead — the CSP below
-     allows a connection to the project's API and nowhere else. -->
+<html lang="en"><head><meta charset="utf-8">
+<!-- Where the QR code on a Business Mileage report leads (verify.html?id=<report ID>).
+     assets/verify-page.js asks the verify_report function for that report's record (a GET, no
+     sign-in, through lib/api.js) and shows it as text. The CSP allows scripts and styles from this
+     folder only and network requests to the project's API only. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://fsnmjxtthahperapdihw.supabase.co; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Email confirmation — TrueMile EV</title>
+<title>Report check — TrueMile EV</title>
 <meta name="color-scheme" content="dark light">
-<script src="assets/auth-landing.js" data-mode="page"></script>
+<script src="assets/config.js"></script>
+<script type="module" src="assets/verify-page.js"></script>
 <link rel="icon" href="assets/icon.png">
 <link rel="stylesheet" href="assets/site.css">
 </head><body>
@@ -26,12 +24,11 @@
     </a>
   </header>
 
-  <main class="landing" id="landing" aria-live="polite">
-    <p class="lead">One moment…</p>
+  <main class="landing" id="verify" aria-live="polite">
+    <p class="lead">Checking the report…</p>
     <noscript>
-      <p class="lead">If you tapped Confirm my email in your TrueMile EV email, open TrueMile EV on your
-      phone and sign in. If sign-in says your email isn't confirmed yet, follow the steps in the app to
-      get a new code.</p>
+      <p class="lead">This page needs JavaScript to look up the report. To check a TrueMile EV Business
+      Mileage report without it, write to us with the report's ID.</p>
       <p><a href="https://gateeng.com/truemileev/">About TrueMile EV</a> ·
       <a href="mailto:support@gateeng.com">support@gateeng.com</a></p>
     </noscript>

@@ -6,10 +6,12 @@
 // only kind that can honestly promise no third-party script of any sort.
 //
 // READ-ONLY by construction, with two deliberate exceptions: request() checks every call against
-// ALLOWED before anything leaves the page. GET reaches the tables below, get_stats, the signed-in user
-// and the account's own report PDFs; POST reaches the auth endpoints (sign-in, sign-out and the
-// password reset's recover / verify), the read-only my_effective_tier function and the delete_account
-// function; PUT reaches the signed-in user, for a new password only. No other
+// ALLOWED before anything leaves the page. GET reaches the tables below, get_stats, the signed-in user,
+// the account's own report PDFs and the public report check (verify_report, for verify.html); POST
+// reaches the auth endpoints (sign-in, the Google sign-in's code exchange, sign-out - including the
+// end of the session an email link handed to confirmed.html or the product page, for link-session.js -
+// and the password reset's recover / verify), the read-only my_effective_tier function and the
+// delete_account function; PUT reaches the signed-in user, for a new password only. No other
 // method exists here. Row-level security would let a signed-in browser write to the tables, and a
 // write from here would skip the app's own date-ordered replays and fire server triggers, so the page
 // never writes a table.
@@ -31,7 +33,7 @@ import {
 /** Re-exported: the door-jamb keys api.garage() selects (never the VIN, raw OCR or confidence). */
 export { JAMB_KEYS };
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 const REST_TABLES = ["vehicles", "trip_log", "charge_session", "phantom_losses", "trip_notes",
   "user_settings", "charge_curve_log", "tax_reports", "tire_records", "dtc_scans"];
@@ -46,6 +48,10 @@ export const DELETE_CONFIRM_WORD = "DELETE";
 export const RECOVER_PATH = "/auth/v1/recover";
 export const VERIFY_PATH = "/auth/v1/verify";
 export const USER_PATH = "/auth/v1/user";
+/** Sign-in, refresh and the Google sign-in's code exchange (grant_type=pkce). */
+export const TOKEN_PATH = "/auth/v1/token";
+/** The public check behind a Business Mileage report's QR code (verify.html); no sign-in. */
+export const VERIFY_REPORT_PATH = "/functions/v1/verify_report";
 
 /** What may leave the page. GET: exact paths (a table read takes any query) or a prefix ending "/". */
 export const ALLOWED = Object.freeze({
@@ -54,16 +60,53 @@ export const ALLOWED = Object.freeze({
     "/functions/v1/get_stats",
     USER_PATH,
     "/storage/v1/object/authenticated/reports/",
+    VERIFY_REPORT_PATH,
   ]),
-  POST: Object.freeze(["/auth/v1/token", "/auth/v1/logout", RECOVER_PATH, VERIFY_PATH,
+  POST: Object.freeze([TOKEN_PATH, "/auth/v1/logout", RECOVER_PATH, VERIFY_PATH,
     "/rest/v1/rpc/my_effective_tier", DELETE_PATH]),
   // The ONE write to the account itself: a new password, at the end of the reset (isPasswordBody).
   PUT: Object.freeze([USER_PATH]),
 });
 
 const SESSION_KEY = "tm_session";
+/** The Google sign-in's PKCE verifier, kept in this tab from the click until Google sends it back. */
+const PKCE_KEY = "tm_pkce";
+/** What a sign-in return may append to the query: GoTrue's error fields and the PKCE code. */
 const ERROR_KEYS = ["error", "error_code", "error_description"];
+const RETURN_KEYS = [...ERROR_KEYS, "code"];
+/** Session tokens in a fragment: the implicit flow, which this page no longer accepts. */
+const FRAGMENT_TOKEN_KEYS = ["access_token", "refresh_token", "provider_token", "provider_refresh_token"];
 const PAGE = 1000;
+
+/**
+ * Every sentence a sign-in return can show. Nothing from the address is ever shown: an error in it is
+ * matched to one of these by its code, so a crafted link cannot put its own words on this page.
+ */
+export const SIGN_IN_MESSAGES = Object.freeze({
+  cancelled: "Sign-in was cancelled, or Google did not allow it. Try again.",
+  expired: "That sign-in took too long and has expired. Try again.",
+  server: "The sign-in server had a problem. Try again in a few minutes.",
+  unfinished: "Sign-in didn't finish. Try again.",
+  offline: "Could not reach the server to finish signing in. Check your connection and try again.",
+  storage: "This browser blocks site storage for this page, so Google sign-in can't finish here. " +
+    "Sign in with your email and password, or allow site data for this site and try again.",
+});
+
+/** A sign-in return's error fields -> one of SIGN_IN_MESSAGES (never the address's own text). */
+export function signInErrorText(params) {
+  const p = params instanceof URLSearchParams ? params : new URLSearchParams(String(params || ""));
+  const code = String(p.get("error_code") || "").trim().toLowerCase();
+  const err = String(p.get("error") || "").trim().toLowerCase();
+  const key = code || err;
+  if (key === "otp_expired" || key === "flow_state_expired") return SIGN_IN_MESSAGES.expired;
+  if (key === "server_error" || key === "unexpected_failure" || key === "temporarily_unavailable") return SIGN_IN_MESSAGES.server;
+  if (key === "access_denied") return SIGN_IN_MESSAGES.cancelled;
+  return SIGN_IN_MESSAGES.unfinished;
+}
+
+/** A session opened again after this long without use is signed out (and revoked) before anything shows. */
+export const IDLE_SIGN_OUT_HOURS = 4;
+const IDLE_SIGN_OUT_MS = IDLE_SIGN_OUT_HOURS * 3600 * 1000;
 
 let cfg = null;
 let fetchImpl = null;
@@ -80,6 +123,7 @@ const curveCache = new Map();    // "vid|from|to" -> Promise<points>
 let taxP = null;
 let garageP = null;              // memoised garage()
 let volatileSession = false;     // site storage is blocked: the session lives in memory until reload
+let idleEnded = false;           // whoAmI() signed an idle session out this page load
 
 // ── setup ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -139,7 +183,7 @@ export function init(c, opts = {}) {
     fixturesUrl = new URL("../fixtures/demo-account.json", loc.href).href;
   }
   fixtureData = null;
-  refreshing = null; accountP = null; me = null; statsCalls = 0; taxP = null; garageP = null;
+  refreshing = null; accountP = null; me = null; statsCalls = 0; taxP = null; garageP = null; idleEnded = false;
   statsCache.clear(); routeCache.clear(); curveCache.clear();
   return { configured: auth.configured(), fixtures: !!fixturesUrl };
 }
@@ -211,11 +255,33 @@ export function isPasswordBody(body) {
   return onlyKeys(o, ["password"]) && typeof o.password === "string" && o.password.length >= MIN_PASSWORD_LENGTH;
 }
 
-/** The body guard for each path that changes something; a path not listed here has none. */
+/** A PKCE code verifier (RFC 7636): 43-128 unreserved characters. */
+const PKCE_VERIFIER_RE = /^[A-Za-z0-9._~-]{43,128}$/;
+
+/** The Google sign-in's code exchange body: exactly {auth_code, code_verifier}. */
+export function isPkceBody(body) {
+  const o = bodyObject(body);
+  return onlyKeys(o, ["auth_code", "code_verifier"]) && typeof o.auth_code === "string" &&
+    /^[A-Za-z0-9._~-]{1,256}$/.test(o.auth_code) && typeof o.code_verifier === "string" && PKCE_VERIFIER_RE.test(o.code_verifier);
+}
+
+/** The grant_type of a /auth/v1/token path ("" when there is none). */
+function grantOf(path) {
+  const p = String(path || "");
+  const q = p.indexOf("?");
+  return q < 0 ? "" : (new URLSearchParams(p.slice(q + 1)).get("grant_type") || "");
+}
+
+/**
+ * The body guard for each path that changes something; a path not listed here has none. [grant]
+ * narrows a rule to one grant_type of the token endpoint.
+ */
 const BODY_RULES = [
   { method: "POST", path: RECOVER_PATH, ok: isRecoverBody, why: "blocked: a reset code request carries the email only" },
   { method: "POST", path: VERIFY_PATH, ok: isVerifyBody, why: "blocked: only a password-reset code is checked here" },
   { method: "PUT", path: USER_PATH, ok: isPasswordBody, why: "blocked: only a new password may be sent" },
+  { method: "POST", path: TOKEN_PATH, grant: "pkce", ok: isPkceBody,
+    why: "blocked: a sign-in code exchange carries the code and its verifier only" },
 ];
 
 /** True when [body] is exactly {"confirm": DELETE_CONFIRM_WORD} (an object with that one key, or its JSON). */
@@ -242,7 +308,8 @@ export async function request(method, path, { body, headers, auth: useAuth = tru
     throw new Error("blocked: the account deletion needs its confirmation word");
   }
   if (!isAllowed(method, path)) throw new Error("blocked: read-only page");
-  const rule = BODY_RULES.find((r) => r.method === String(method || "").toUpperCase() && r.path === pathOf(String(path || "")));
+  const rule = BODY_RULES.find((r) => r.method === String(method || "").toUpperCase() && r.path === pathOf(String(path || "")) &&
+    (!r.grant || grantOf(path) === r.grant));
   if (rule && !rule.ok(body)) throw new Error(rule.why);
   if (!cfg || !cfg.PROJECT_URL || !cfg.ANON_KEY) throw new Error("The dashboard is not configured");
   if (!fetchImpl) throw new Error("No network in this environment");
@@ -275,6 +342,7 @@ export async function request(method, path, { body, headers, auth: useAuth = tru
     try { console.warn(`${method.toUpperCase()} ${pathOf(path)} → ${r.status}`, t.slice(0, 500)); } catch (_) { /* no console */ }
     throw err;
   }
+  if (useAuth) touchSession();                    // a signed-in call went through: the session is in use
   return raw ? r : r;
 }
 
@@ -301,15 +369,87 @@ export function serverText(body) {
 const getJson = async (path) => (await request("GET", path)).json();
 
 // ── session ───────────────────────────────────────────────────────────────────────────────────
-// sessionStorage, not localStorage: the token dies with the tab. On a shared host (gateeng.com serves
+// sessionStorage, not localStorage: the token is scoped to this tab. On a shared host (gateeng.com serves
 // other repos) that is the difference between "this tab" and "anything ever published on this origin".
+// It does NOT end when the tab closes: browsers restore a closed tab, session storage included (Reopen
+// closed tab, a restored browser session). So the record carries when it was last used, and a session
+// opened again after IDLE_SIGN_OUT_HOURS without use is signed out, and revoked on the server, before
+// anything is shown (whoAmI). Sign out stays the one sure end on a shared computer.
 
-function saveSession(s) { try { storage && storage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (_) { /* no storage */ } }
+/** Stores [s] stamped with the time it was last used (now). */
+function saveSession(s) {
+  try {
+    if (!storage) return;
+    const rec = s && typeof s === "object" ? { ...s, last_active_ms: Date.now() } : s;
+    storage.setItem(SESSION_KEY, JSON.stringify(rec));
+  } catch (_) { /* no storage */ }
+}
 function loadSession() { try { return JSON.parse((storage && storage.getItem(SESSION_KEY)) || "null"); } catch (_) { return null; } }
 function clearSession() { try { storage && storage.removeItem(SESSION_KEY); } catch (_) { /* no storage */ } }
 
+/** The stored session was used just now (a signed-in request went through, or the reader changed page). */
+function touchSession() {
+  const s = loadSession();
+  if (s && s.access_token) saveSession(s);
+}
+
+/**
+ * True when [s] was last used more than IDLE_SIGN_OUT_HOURS ago. This page stamps last_active_ms on
+ * every record it saves. A record saved by an older build of the page has no stamp; its last use can be
+ * no later than its access token's expiry (that build refreshed the token whenever a call came within a
+ * minute of it), so it counts as idle once that expiry is IDLE_SIGN_OUT_HOURS behind, or when it has no
+ * expiry to go by.
+ */
+export function idleTooLong(s, nowMs = Date.now()) {
+  const t = Number(s && s.last_active_ms);
+  if (Number.isFinite(t) && t > 0) return nowMs - t > IDLE_SIGN_OUT_MS;
+  const exp = Number(s && s.expires_at);
+  if (!Number.isFinite(exp) || exp <= 0) return true;
+  return nowMs - exp * 1000 > IDLE_SIGN_OUT_MS;
+}
+
+/** Only what the page needs of a token reply: never the user object or Google's own provider tokens. */
+function sessionOf(s) {
+  const expiresAt = Number(s.expires_at) || (Number(s.expires_in) ? Math.floor(nowSec()) + Number(s.expires_in) : 0);
+  return { access_token: s.access_token, refresh_token: s.refresh_token || null, expires_at: expiresAt,
+    token_type: s.token_type || "bearer" };
+}
+
 const nowSec = () => Date.now() / 1000;
 const expired = (s) => !!(s && s.expires_at && nowSec() > s.expires_at - 60);
+
+// ── PKCE (the Google sign-in) ─────────────────────────────────────────────────────────────────
+// The authorization-code flow with a proof key: Google sends back a one-time ?code= that only this tab
+// can trade for a session, because only this tab holds the verifier. No token ever sits in the address
+// (the implicit flow put the session in app.html#access_token=..., which browser history keeps), and a
+// link carrying someone else's code or tokens cannot sign this browser in to their account.
+
+function base64url(bytes) {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** A fresh PKCE verifier: 48 random bytes, base64url (64 characters). */
+export function pkceVerifier() {
+  const a = new Uint8Array(48);
+  crypto.getRandomValues(a);
+  return base64url(a);
+}
+
+/** The S256 challenge of [verifier]: base64url(SHA-256(verifier)), no padding. */
+export async function pkceChallenge(verifier) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(verifier)));
+  return base64url(new Uint8Array(d));
+}
+
+/** The verifier kept for this tab's Google sign-in, removed as it is read (it is good for one exchange). */
+function takeVerifier() {
+  let v = null;
+  try { v = storage && storage.getItem(PKCE_KEY); } catch (_) { v = null; }
+  try { storage && storage.removeItem(PKCE_KEY); } catch (_) { /* no storage */ }
+  return typeof v === "string" && PKCE_VERIFIER_RE.test(v) ? v : null;
+}
 
 /** Refresh when within 60 s of expiry. Single flight: parallel callers share one refresh. */
 async function refreshIfNeeded() {
@@ -352,13 +492,17 @@ export const auth = {
   },
 
   /**
-   * Google returns the session in the URL fragment, and an error in the query string (GoTrue also
-   * copies it into the fragment, for now). Adopt the session or read the error, and scrub what was
-   * read from the address bar: the OAuth fragment, and the error keys of the query (anything else in
-   * the query, such as ?fixtures, stays). -> {ok:true} | {ok:false} | {error: "<error_description>"}
+   * The Google sign-in's return (PKCE): GoTrue sends the browser back with ?code=<one-time code>, or
+   * with an error in the query (and, for now, a copy in the fragment). A code is traded for a session
+   * with this tab's verifier (POST /auth/v1/token?grant_type=pkce); an error becomes one of
+   * SIGN_IN_MESSAGES, never the address's own text. Session tokens in a fragment (the implicit flow)
+   * are never adopted: that would let a crafted link sign this browser in to another account. What
+   * was read is scrubbed from the address bar first: the code and the error keys of the query
+   * (anything else, such as ?fixtures, stays) and an auth fragment (a page route stays).
+   * -> {ok:true} | {ok:false} | {error: <one of SIGN_IN_MESSAGES>}
    * [loc] / [hist] default to the page's (tests pass their own).
    */
-  adoptRedirect(loc = here(), hist = globalThis.history) {
+  async adoptRedirect(loc = here(), hist = globalThis.history) {
     if (!loc) return { ok: false };
     const hash = loc.hash || "";
     const search = loc.search || "";
@@ -366,43 +510,58 @@ export const auth = {
     const query = new URLSearchParams(search.replace(/^\?/, ""));
     const hasErr = (p) => !!p && !!(p.get("error") || p.get("error_description") || p.get("error_code"));
     const queryErr = hasErr(query);
-    if (!fragment && !queryErr) return { ok: false };
+    const fragErr = hasErr(fragment);
+    const fragTokens = !!fragment && FRAGMENT_TOKEN_KEYS.some((k) => fragment.has(k));
+    const code = query.get("code");
+    if (!queryErr && !fragErr && !fragTokens && !code) return { ok: false };
+    const authFragment = fragErr || fragTokens;
     const scrub = () => {
       const kept = search.replace(/^\?/, "").split("&").filter((seg) => {
         if (!seg) return false;
         let k = seg.split("=")[0];
         try { k = decodeURIComponent(k.replace(/\+/g, " ")); } catch (_) { /* keep the raw key */ }
-        return !ERROR_KEYS.includes(k);
+        return !RETURN_KEYS.includes(k);
       });
       const nextSearch = kept.length ? "?" + kept.join("&") : "";
-      const nextHash = fragment ? "" : hash;      // a page route stays; the OAuth fragment goes
+      const nextHash = authFragment ? "" : hash;  // a page route (or any other anchor) stays; an auth fragment goes
       try { hist.replaceState(null, "", loc.pathname + nextSearch + nextHash); } catch (_) { /* no history */ }
     };
-    const errOf = (p) => (p.get("error_description") || p.get("error") || p.get("error_code") || "Sign-in failed").replace(/\+/g, " ");
-    if (queryErr || hasErr(fragment)) {
-      scrub();
-      return { error: errOf(hasErr(fragment) ? fragment : query) };
-    }
-    const p = fragment;
-    const access_token = p.get("access_token");
-    if (!access_token) return { ok: false };
-    const expiresAt = Number(p.get("expires_at") || 0) ||
-      (Number(p.get("expires_in") || 0) ? Math.floor(nowSec()) + Number(p.get("expires_in")) : 0);
-    saveSession({
-      access_token,
-      refresh_token: p.get("refresh_token"),
-      expires_at: expiresAt,
-      token_type: p.get("token_type") || "bearer",
-    });
     scrub();
+    if (queryErr || fragErr) {
+      takeVerifier();                             // this attempt is over
+      return { error: signInErrorText(fragErr ? fragment : query) };
+    }
+    if (!code) return { error: SIGN_IN_MESSAGES.unfinished };   // tokens in the fragment: never adopted
+    const verifier = takeVerifier();
+    if (!verifier) return { error: volatileSession ? SIGN_IN_MESSAGES.storage : SIGN_IN_MESSAGES.unfinished };
+    let r;
+    try {
+      r = await request("POST", `${TOKEN_PATH}?grant_type=pkce`, { auth: false, body: { auth_code: code, code_verifier: verifier } });
+    } catch (e) {
+      if (e && (e.status || /^blocked:/.test(String(e.message)))) return { error: SIGN_IN_MESSAGES.unfinished };
+      return { error: SIGN_IN_MESSAGES.offline };
+    }
+    const s = await r.json().catch(() => null);
+    if (!s || typeof s !== "object" || !s.access_token) return { error: SIGN_IN_MESSAGES.unfinished };
+    saveSession(sessionOf(s));
+    me = null;
     return { ok: true };
   },
 
-  /** The Google sign-in URL (a navigation, not a request). */
-  googleUrl() {
+  /**
+   * The Google sign-in URL (a navigation, not a request), with a fresh PKCE challenge whose verifier
+   * stays in this tab. Throws SIGN_IN_MESSAGES.storage when the browser blocks site storage: the
+   * verifier would not survive the trip to Google and back.
+   */
+  async googleUrl() {
+    if (volatileSession || !storage) throw new Error(SIGN_IN_MESSAGES.storage);
+    const verifier = pkceVerifier();
+    try { storage.setItem(PKCE_KEY, verifier); } catch (_) { throw new Error(SIGN_IN_MESSAGES.storage); }
     const u = new URL(`${cfg.PROJECT_URL}/auth/v1/authorize`);
     u.searchParams.set("provider", "google");
     u.searchParams.set("redirect_to", cfg.REDIRECT_URL || "");
+    u.searchParams.set("code_challenge", await pkceChallenge(verifier));
+    u.searchParams.set("code_challenge_method", "s256");
     return u.toString();
   },
 
@@ -431,6 +590,16 @@ export const auth = {
       me = normUser({ id: "demo-user", email: "demo@example.invalid", ...(f.user || {}) });
       return me;
     }
+    // A tab reopened (or a browser session restored) long after its last use: sign it out, and end it
+    // on the server, before anything of the account is shown.
+    const held = loadSession();
+    if (held && held.access_token && idleTooLong(held)) {
+      idleEnded = true;
+      await auth.signOut();
+      return null;
+    }
+    // Opening the page is use; this also stamps a record an older build of the page saved without one.
+    if (held && held.access_token) saveSession(held);
     const s = await refreshIfNeeded();
     if (!s || !s.access_token) return null;
     try {
@@ -493,9 +662,20 @@ export const auth = {
     return out;
   },
 
+  /** True when whoAmI() signed out a session that had not been used for IDLE_SIGN_OUT_HOURS. */
+  endedForIdle() { return idleEnded; },
+
+  /** The reader is using the page (a page change): keeps the stored session from counting as idle. */
+  touch() { if (!fixturesUrl) touchSession(); },
+
   async signOut() {
     if (fixturesUrl) return;
-    const s = loadSession();
+    // After an idle hour the access token has expired, and GoTrue refuses a logout signed with an
+    // expired token (403 bad_jwt): the server session, and its refresh token, would stay alive. Refresh
+    // first, so the logout really ends it. A refused refresh means the server session is already gone
+    // (refreshIfNeeded clears it and returns null); a network failure falls back to the stored token.
+    let s = null;
+    try { s = await refreshIfNeeded(); } catch (_) { s = loadSession(); }
     if (s && s.access_token) {
       try {
         // scope=local ends THIS browser's session only. GoTrue's default is global, which would revoke
@@ -507,6 +687,32 @@ export const auth = {
     me = null;
   },
 };
+
+/** A session access token (a JWT: three base64url parts) as Supabase appends it to an email link. */
+const LINK_TOKEN_RE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const LINK_TOKEN_MAX = 8192;
+
+/**
+ * Ends, on the server, the session an email link handed to this site (9/30 audit F15). Supabase
+ * confirms a Confirm my email link and then sends the browser to confirmed.html (or the product page)
+ * with a whole session appended (#access_token=...&refresh_token=...). Nothing here signs in from a
+ * link and auth-landing.js removes the tokens from the address at once, but the tokenized address can
+ * stay in the browser's history, and a refresh token does not expire on its own. So link-session.js
+ * calls this with the link's access token: ONE POST /auth/v1/logout?scope=local signed with that token,
+ * which ends that session only (never the account's other sessions: the phone app keeps its own).
+ * The token is never stored, and nothing about the account is read. -> true when the server ended it,
+ * false otherwise (no request at all for anything that is not a token).
+ */
+export async function endEmailLinkSession(accessToken) {
+  const t = String(accessToken ?? "");
+  if (fixturesUrl || t.length > LINK_TOKEN_MAX || !LINK_TOKEN_RE.test(t)) return false;
+  try {
+    await request("POST", "/auth/v1/logout?scope=local", { auth: false, headers: { authorization: `Bearer ${t}` } });
+    return true;
+  } catch (_) {
+    return false;          // already ended, expired, or offline: nothing else this page can do
+  }
+}
 
 /**
  * A reset step's failed request as lib/recovery.js's outcome: the server's status and body when one
@@ -867,6 +1073,20 @@ export function boardStats(vehicleId, params = {}, opts = {}) {
   return p;
 }
 
+/** What a Board card says when get_stats answered 429 (BOARD_STATS_BUSY) or failed otherwise. */
+export const BOARD_STATS_BUSY = "The Board figures were asked for too often in a short time. " +
+  "Reload the page in a few minutes to see them.";
+
+/**
+ * The whole sentence for a failed boardStats(). get_stats answers 429 when an account has asked for the
+ * Board figures too often (a per-account limit the app and this page share, audit 9/30 G1); that is said
+ * plainly, never as a status code. Anything else: "The Board figures did not load: <its message>".
+ */
+export function boardStatsErrorText(err) {
+  if (err && err.status === 429) return BOARD_STATS_BUSY;
+  return `The Board figures did not load: ${String((err && err.message) || err || "unknown error")}`;
+}
+
 // ── the page's own modules (the "Reload to finish" banner) ────────────────────────────────────
 
 /** A module of this page: same origin as [base], under assets/lib/ or assets/views/, a plain .js name. */
@@ -918,13 +1138,86 @@ export function taxReports() {
   return taxP;
 }
 
-/** One issued report's PDF, as a Blob (the account's own folder in the reports bucket). */
+/**
+ * A Business Mileage report ID as the app prints it: "TM-<year>-" and 6 (early reports) to 32 hex
+ * characters. Nothing else is ever sent to verify_report or shown by verify.html.
+ */
+export const REPORT_ID_RE = /^TM-\d{4}-[0-9A-F]{6,32}$/;
+
+/** [id] as a report ID (trimmed, upper-cased), or "" when it is not one. */
+export function reportIdOf(id) {
+  const t = String(id ?? "").trim().toUpperCase();
+  return REPORT_ID_RE.test(t) ? t : "";
+}
+
+/**
+ * The ID the app mints now: "TM-<year>-" and a UUID's 32 hex characters (TaxReportPdf.kt). It is the
+ * only form verify_report looks up (audit 9/30, F21): an early report's 6-character ID could be guessed
+ * by trying them all against a public check, so the server answers any other form as not found
+ * without reading anything.
+ */
+export const CURRENT_REPORT_ID_RE = /^TM-\d{4}-[0-9A-F]{32}$/;
+
+/**
+ * The public check behind a report's QR code (verify.html): verify_report's JSON record of [id], asked
+ * without sign-in (GET, anon key only). -> {kind: "found", id, record} | {kind: "not_found", id} |
+ * {kind: "invalid"} (no request) | {kind: "legacy", id} (an early report's short ID, which the server
+ * does not look up: no request, so the page never says such a report does not exist) |
+ * {kind: "unavailable", id} (no answer, or not the JSON form).
+ */
+export async function verifyReport(id) {
+  const rid = reportIdOf(id);
+  if (!rid) return { kind: "invalid" };
+  if (!CURRENT_REPORT_ID_RE.test(rid)) return { kind: "legacy", id: rid };
+  let r;
+  try {
+    r = await request("GET", `${VERIFY_REPORT_PATH}?id=${encodeURIComponent(rid)}&format=json`, { auth: false });
+  } catch (e) {
+    if (e && e.status === 404) return { kind: "not_found", id: rid };
+    if (e && e.status === 400) return { kind: "invalid" };
+    return { kind: "unavailable", id: rid };
+  }
+  const j = await r.json().catch(() => null);
+  if (!j || typeof j !== "object" || Array.isArray(j)) return { kind: "unavailable", id: rid };
+  if (j.found === false) return { kind: "not_found", id: rid };
+  return { kind: "found", id: rid, record: j };
+}
+
+/** What the Report section says when an issued report has no PDF behind it (taxReportPdf's err.missing). */
+export const REPORT_PDF_MISSING = "This report's PDF was not saved to your account (its upload did not go through " +
+  "when the report was made), so it can't be downloaded here. Make the report again in the app to save a new copy.";
+
+/**
+ * Storage's answer for a file that is not there: 404, or 400 with {"statusCode":"404","error":"not_found",
+ * "message":"Object not found","code":"NoSuchKey"} (what the live storage answers, probed 9/30).
+ */
+function isMissingObject(err) {
+  if (!err || !err.status) return false;
+  if (err.status === 404) return true;
+  return err.status === 400 && /"statusCode"\s*:\s*"?404|not_found|NoSuchKey|Object not found/i.test(String(err.detail || ""));
+}
+
+/**
+ * One issued report's PDF, as a Blob (the account's own folder in the reports bucket). A report can be
+ * registered without its file: the app registers it even when the upload failed (a lost connection,
+ * or the account's file limit), so a missing file is thrown with err.missing and REPORT_PDF_MISSING
+ * as its message instead of storage's raw answer.
+ */
 export async function taxReportPdf(storagePath) {
   if (fixturesUrl) throw new Error("The demo data has no report files");
   const clean = String(storagePath || "").replace(/^\/+/, "").replace(/^reports\//, "");
   if (!clean || clean.includes("..")) throw new Error("No report file");
   const path = "/storage/v1/object/authenticated/reports/" + clean.split("/").map(encodeURIComponent).join("/");
-  const r = await request("GET", path);
+  let r;
+  try {
+    r = await request("GET", path);
+  } catch (e) {
+    if (!isMissingObject(e)) throw e;
+    const m = new Error(REPORT_PDF_MISSING);
+    m.missing = true;
+    m.status = e.status;
+    throw m;
+  }
   return r.blob();
 }
 

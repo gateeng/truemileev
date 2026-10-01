@@ -265,6 +265,12 @@ footer a{margin:0 7px;display:inline-block}
 .landing .links{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 14px}
 .landing .links .btn{white-space:normal;text-align:center}
 .landing .note{margin:0}
+/* the report check (verify.html, assets/verify-page.js): the record's rows */
+.landing dl.vrows{display:grid;grid-template-columns:auto 1fr;margin:14px 0 16px;border-top:1px solid var(--line)}
+.landing dl.vrows dt,.landing dl.vrows dd{margin:0;padding:8px 0;border-bottom:1px solid var(--line)}
+.landing dl.vrows dt{color:var(--dim);padding-right:14px}
+.landing dl.vrows dd{color:var(--ink);font-weight:600;overflow-wrap:anywhere;min-width:0}
+.landing dl.vrows dd.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84em;font-weight:500}
 footer .fine{margin-top:10px}
 .authnote{position:relative;display:flex;flex-direction:column;gap:4px;margin:10px 0 0;
   background:var(--card);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:12px;

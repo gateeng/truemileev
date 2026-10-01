@@ -14,13 +14,13 @@
 // The page asks for the code AND the new password on one screen, and checks the password before the
 // code is spent: a too-short password never burns a single-use code.
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** GoTrue's email code is 6 digits by default and configurable up to 10 (PasswordRecoveryFlow). */
 export const CODE_MIN_LENGTH = 6;
 export const CODE_MAX_LENGTH = 10;
 /** The Supabase Auth minimum password length (the app's sign-up sets no other rule). */
-export const MIN_PASSWORD_LENGTH = 6;
+export const MIN_PASSWORD_LENGTH = 8;
 /** GoTrue holds a second email to the same address for 60 s by default; mirrored here. */
 export const RESEND_COOLDOWN_MS = 60_000;
 

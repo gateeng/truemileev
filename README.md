@@ -9,7 +9,12 @@ web/truemileev/
   index.html            public page: what the app does, how it works, links
   app.html              the dashboard (noindex): one page, hash routes (#/account, #/map, ...)
   confirmed.html        where the sign-up email's Confirm my email link lands (noindex; the app sends it
-                        as redirect_to); assets/auth-landing.js reports the result
+                        as redirect_to); assets/auth-landing.js reports the result, and
+                        assets/link-session.js ends the session the link handed over
+  verify.html           the report check behind a Business Mileage report's QR code (noindex):
+                        assets/verify-page.js asks verify_report (format=json, via lib/api.js) and shows
+                        the record as text; an early report's short ID is not looked up (it says to
+                        email support instead)
   assets/config.js      project URL + the public anon key (tools/web-config.py fills it); applies a
                         stored Light / Dark choice before the first paint
   assets/app.js         the shell: sign-in, the left sidebar, the topbar (vehicle, plan, Refresh, the
@@ -65,16 +70,30 @@ The last one is Supabase's own callback, not this site's — Google returns to S
 returns to `app.html`. If the page URL is not allow-listed, Supabase sends the browser to the Site URL
 instead and the page stays signed out.
 
+Google sign-in uses the **PKCE** flow (`lib/api.js` `googleUrl` / `adoptRedirect`): the click stores a
+random verifier in this tab's session storage and sends its SHA-256 challenge to `/auth/v1/authorize`;
+Supabase returns to `app.html?code=…`, and only this tab can trade that one-time code for a session
+(`POST /auth/v1/token?grant_type=pkce` with exactly `{auth_code, code_verifier}`). No token ever sits in
+the address, so none lands in browser history, and a link carrying someone else's code or tokens
+cannot sign this browser in to their account: session tokens in a fragment are never adopted. An
+error in the return is shown as one of `SIGN_IN_MESSAGES`, never as text from the address.
+
 **Email confirmation link.** The app sends `redirect_to=https://gateeng.com/truemileev/confirmed.html`
 on sign-up and on a re-sent confirmation, so that address must be in the same Redirect URLs list, and
 the Site URL must be `https://gateeng.com/truemileev/` (docs/SUPABASE_EMAIL_TEMPLATES.md). Supabase
 confirms the address before it redirects and appends its result (`#access_token=…&type=signup` or
 `#error=…&error_code=otp_expired`). `assets/auth-landing.js`, a classic script in the `<head>` of
 `confirmed.html` and of the product page, removes that from the address with `history.replaceState`
-before anything paints, keeps no token, stores nothing and makes no network call, then says what
-happened (the product page only when an auth result is present; `#beta` and other anchors are left
-alone). Signing in happens in the app. `app.html` is not involved: its own sign-in return is handled
-by `lib/api.js`.
+before anything paints, keeps no token and stores nothing, then says what happened (the product page
+only when an auth result is present; `#beta` and other anchors are left alone). Signing in happens in
+the app. `app.html` is not involved: its own sign-in return is handled by `lib/api.js`.
+A link that worked hands over a whole session, and `replaceState` cleans only the current history
+entry, so that session is ended rather than just dropped (audit 9/30, F15): `auth-landing.js` holds
+the access token in memory and loads `assets/link-session.js`, which takes it once and sends one
+`POST /auth/v1/logout?scope=local` signed with it through `lib/api.js` (`endEmailLinkSession`). That
+ends the link's session only; the account's other sessions, the phone app's included, are untouched.
+`confirmed.html`'s CSP therefore allows a connection to the project's API (and nowhere else), and
+`link-session.js` loads `config.js` for the public anon key when the page has not.
 
 **Forgot password?** (under the email sign-in) is the app's own code flow (`lib/recovery.js`, a port of
 `ui/auth/PasswordRecoveryFlow.kt`): `POST /auth/v1/recover` emails a code, `POST /auth/v1/verify`
@@ -83,9 +102,15 @@ sets the new password with that session's own token; only then does the session 
 sign-in. It needs the Supabase "Reset Password" email template to carry the code (`{{ .Token }}`),
 the same template the app relies on.
 
-The session lives in `sessionStorage`, so it dies with the tab. That is deliberate: a token that
-survives a closed tab is a token that survives a shared computer. A link opened in a new tab starts
-signed out for the same reason, which is why the dashboard is a single page with hash routes.
+The session lives in `sessionStorage`, scoped to this tab: a link opened in a new tab starts signed
+out, which is why the dashboard is a single page with hash routes. It does **not** die with the tab:
+browsers restore a closed tab, session storage included (Reopen closed tab, a restored browser
+session), so a closed tab on a shared computer can come back signed in. Two things limit that: the
+stored session carries when it was last used, and a session opened again after `IDLE_SIGN_OUT_HOURS`
+(4) without use is signed out and revoked on the server before anything is shown; and Sign out
+refreshes an expired access token first, so its logout really ends the server session (GoTrue refuses a
+logout signed with an expired token). The sign-in form and the privacy policy tell readers on a shared
+computer to use Sign out.
 
 ## 3. Publishing — it goes live at `https://gateeng.com/truemileev/`
 
@@ -132,14 +157,20 @@ vectors, and they check the rules below across every published file.
    *could* write to them — and a direct write bypasses the date-ordered cost replay the app and the
    sync functions run, leaving the money wrong on both surfaces with no error. Corrections belong in
    the app. `assets/lib/api.js` is the only file that talks to the network, and it refuses anything
-   but reads, sign-in, sign-out, the password reset's three calls, the read-only tier lookup and that
-   one confirmed deletion before a request leaves. Per-browser preferences (units, theme, tiles, report design, memberships) stay in
+   but reads (including the public report check behind verify.html), sign-in (with the Google
+   sign-in's code exchange), sign-out (including ending the session an email link handed to
+   confirmed.html or the product page), the password reset's three calls, the read-only tier lookup and
+   that one confirmed deletion before a request leaves. Per-browser preferences (units, theme, tiles, report design, memberships) stay in
    this browser's storage and are never sent.
 2. **Board figures come from get_stats. Period figures (the Report tiles, vs avg, charts, exports) are
    computed in the browser from the rows with the same formulas the app's Report uses; the app's
    Report does the same on the phone, and the tests pin the formulas.**
 3. **get_stats at most once per page load, automatically; a second vehicle only on a click. Refresh
-   reloads the page. No polling.** `get_stats` records an app-open on every call.
+   reloads the page. No polling.** `get_stats` records an app-open on every call. It also has a
+   per-account call limit shared with the app (`supabase/functions/_shared/rate_limits.ts`); a 429
+   shows `api.BOARD_STATS_BUSY` ("asked for too often ... reload in a few minutes"), never a status code.
+   A Business Mileage report registered without its PDF (the app registers it even when the upload
+   failed) says so in the Report section (`api.REPORT_PDF_MISSING`) instead of storage's raw answer.
 4. **Relabel the internal accounting names.** The prepaid-energy figures arrive under internal key
    names; both render as "Prepaid", told apart by their units, the way the app labels them. No raw
    JSON panel, no generic key→label table; CSV headers are the app's own human labels.

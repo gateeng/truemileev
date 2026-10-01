@@ -4,7 +4,7 @@
 import { parts, fromLocal, startOfDay, endOfDay, addDays, parseYmd } from "./tz.js";
 import { dateFmt } from "./format.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** The owner's order (9/26): day, week, month, year, YTD, all time, custom. */
 export const RANGES = ["day", "week", "month", "year", "ytd", "all", "custom"];

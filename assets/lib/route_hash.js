@@ -9,7 +9,7 @@
 // build's routes (#/dashboard, #/trips, #/journeys, #/charges, #/charts, #/exports) still work: the
 // shell replaces them with their new address, the query carried over (legacyRedirect).
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** The sidebar's sections, in order. */
 export const SECTIONS = Object.freeze(["account", "garage", "financial", "charge", "map", "report", "settings"]);

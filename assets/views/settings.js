@@ -11,7 +11,7 @@ import { LABELS as RANGE_LABELS, DEFAULT_RANGE } from "../lib/periods.js";
 import { currentPref } from "../lib/theme.js";
 import * as api from "../lib/api.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** The periods a section may open on (Custom needs dates, so it is not a default). */
 export const DEFAULT_RANGES = ["day", "week", "month", "year", "ytd", "all"];

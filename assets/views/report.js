@@ -31,7 +31,7 @@ import {
   buildPeriod, buildJourney, buildMileage, scopeJourneys, journeyRouteSvg, generatedOn,
 } from "./print.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 const DOCS = [
   { id: "period", label: "Period report", feature: "periodPrint", kind: "report" },
@@ -627,7 +627,10 @@ export function mount(el, ctx) {
       saveBlob(blob, `TrueMileEV_Mileage_${r.year}_${r.report_id}.pdf`);
       msg.innerHTML = "";
     } catch (err) {
-      msg.innerHTML = `<p class="msg err">Could not download the report: ${esc(err && err.message ? err.message : err)}</p>`;
+      // A registered report whose file never reached the account (api.REPORT_PDF_MISSING): say so plainly.
+      msg.innerHTML = err && err.missing
+        ? `<p class="msg info">${esc(err.message)}</p>`
+        : `<p class="msg err">Could not download the report: ${esc(err && err.message ? err.message : err)}</p>`;
     } finally { b.disabled = false; }
   }
 

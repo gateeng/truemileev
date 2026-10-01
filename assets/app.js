@@ -7,7 +7,7 @@
 // Modules are loaded with import() so a stale file left in the browser cache (GitHub Pages caches
 // for up to ten minutes) shows one "Reload to finish" banner instead of a blank page.
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 const LIB = ["api", "tz", "units", "format", "periods", "rows", "metrics", "compare", "gates", "board", "dom",
   "journeys", "stops", "route", "tripdetail", "curve", "svgchart", "series", "csv", "printmodel", "taxreport",
@@ -133,7 +133,9 @@ async function boot() {
   const st = api.init(window.TM_CONFIG);
   if (!st.configured) { show($("unconfigured"), true); return; }
 
-  const back = api.auth.adoptRedirect();
+  // The Google sign-in's return: a one-time code traded for a session (PKCE), or an error, which is
+  // always one of api.js's fixed sentences, never text from the address.
+  const back = await api.auth.adoptRedirect();
   wireSignIn();
   if (back && back.error) signInError(back.error);
   if (api.sessionIsVolatile && api.sessionIsVolatile()) storageNote();
@@ -147,7 +149,13 @@ async function boot() {
     unreachable(e);
     return;
   }
-  if (!me) { showSignIn(); return; }
+  if (!me) {
+    showSignIn();
+    if (api.auth.endedForIdle && api.auth.endedForIdle()) {
+      signInError(`You were signed out because this page was not used for ${api.IDLE_SIGN_OUT_HOURS} hours. Sign in again.`, "info");
+    }
+    return;
+  }
   await enter(me);
 }
 
@@ -195,17 +203,24 @@ function showSignIn() {
   $("shell").classList.remove("with-nav", "rail");
 }
 
-function signInError(text) {
+function signInError(text, kind = "err") {
   const m = $("signInMsg");
   m.innerHTML = "";
   const d = document.createElement("div");
-  d.className = "msg err";
+  d.className = `msg ${kind}`;
   d.textContent = text;
   m.appendChild(d);
 }
 
 function wireSignIn() {
-  $("googleBtn").addEventListener("click", () => { location.href = api.auth.googleUrl(); });
+  // The URL carries a fresh PKCE challenge (api.js keeps its verifier in this tab until Google returns).
+  $("googleBtn").addEventListener("click", async () => {
+    try {
+      location.href = await api.auth.googleUrl();
+    } catch (e) {
+      signInError(e && e.message ? e.message : "Sign-in failed");
+    }
+  });
   const go = async () => {
     const email = $("email").value.trim();
     const pw = $("password").value;
@@ -836,6 +851,8 @@ function mountCurrent() {
     try { handle.unmount(); } catch (_) { /* the old page is going anyway */ }
   }
   handle = null;
+  // Moving between pages is use: the session does not count as idle (api.js IDLE_SIGN_OUT_HOURS).
+  try { api.auth.touch(); } catch (_) { /* no storage */ }
 
   let { path, query } = currentRoute();
   const moved = L.route_hash.legacyRedirect(path, query);
@@ -932,8 +949,17 @@ function accountDeleted() {
   try { history.replaceState(null, "", location.pathname + location.search); } catch (_) { /* no history */ }
   document.title = "Account deleted · TrueMile EV";
   const view = $("view");
+  // Static text only (innerHTML): what was deleted, and what the Privacy Policy says is kept.
   view.innerHTML = `<div class="panel narrow center account-done"><h1>Your account has been deleted.</h1>` +
-    `<p class="note">Everything stored with it on our servers is gone.</p>` +
+    `<p class="note">Your trips and routes, your charges with their locations and prices, your settings and your reports ` +
+    `have been deleted from our servers.</p>` +
+    `<p class="note">As the <a href="https://gateeng.com/truemile-privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a> ` +
+    `explains, a few records are kept: a battery-health record keyed to the vehicle's VIN (no name, email, locations or costs; ` +
+    `email us the VIN to have it deleted), any community price contributions you made (a public station's location and price ` +
+    `under a coded identifier, never your account; they expire within 14 days), crash reports (a random install ID only; ` +
+    `deleted after 90 days), our database host's request logs (IP address and web address, which can include the VIN; ` +
+    `up to 7 days), a one-way code for up to 90 days so the introductory period can't be restarted, ` +
+    `the deleted account's ID for 35 days, and backups for up to 7 days.</p>` +
     `<p><a class="btn primary" href="index.html">Go to the TrueMile EV page</a></p></div>`;
   show(view, true);
 }

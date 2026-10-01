@@ -15,7 +15,7 @@ import { isHomeNetwork } from "./stops.js";
 import { isDc, aggregateEff, isEnergyMeasured } from "./rows.js";
 import { parts, fromLocal, addMonths } from "./tz.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const DAY = 86_400_000;

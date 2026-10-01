@@ -5,7 +5,7 @@
 import { addMonths, localZone } from "./tz.js";
 import { isDc } from "./rows.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 /** Tier.from: "pro" / "max" / "business", anything else (null, legacy "freemium") the entry tier. */
 export const rank = { free: 0, pro: 1, max: 2, business: 3 };

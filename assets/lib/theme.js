@@ -10,7 +10,7 @@
 
 import { store } from "./dom.js";
 
-export const BUILD = "2026-09-30.2";
+export const BUILD = "2026-10-01.1";
 
 export const THEME_PREFS = Object.freeze(["system", "light", "dark"]);
 const KEY = "tm.theme";
