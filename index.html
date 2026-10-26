@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TrueMile EV — the EV logbook that learns your vehicle</title>
-<meta name="description" content="TrueMile EV for the Ford F-150 Lightning, on Google Play from October 1, 2026. It connects to your truck's OBD adapter and records every drive and charge automatically: true cost per mile, real range, your own charging curve, battery health, and a trip planner built on your driving instead of lab numbers.">
+<meta name="description" content="TrueMile EV for the Ford F-150 Lightning, on Google Play from October 1, 2026. It connects to your truck's OBD adapter and records every drive and charge: true cost per mile, real range, your own charging curve, battery health, and a trip planner built on your driving instead of lab numbers.">
 <meta name="color-scheme" content="dark light">
 <!-- An email link that falls back to this page (the project's Site URL) arrives with Supabase's
      result appended (#access_token=... or #error=...). This classic script removes it from the address
@@ -40,6 +40,10 @@
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/></svg>
       Sign in
     </a>
+    <a class="btn" href="#pricing">
+      <svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3 3h8.2l9.8 9.8-8.2 8.2L3 11.2V3zm4.6 2.4a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z"/></svg>
+      Plans &amp; pricing
+    </a>
     <div class="stores">
       <a class="btn" href="https://play.google.com/store/apps/details?id=com.gateengineering.truemileev">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 2.5v19l11-9.5-11-9.5zm13.2 7.1 2.9 2.4-2.9 2.4-2.8-2.4 2.8-2.4z"/></svg>
@@ -61,8 +65,11 @@
   <div id="appnav" class="appnav" role="tablist" aria-label="Choose a screen"></div>
   <div id="readout" class="readout" aria-live="polite"></div>
 
-  <!-- Launch copy: every [data-launch] slot, #plans, #guarantee, #betaSteps and #betaGets are filled by
-       assets/launch-page.js from assets/lib/launch.js, the one place the launch wording lives. -->
+  <!-- Launch copy: every [data-launch] slot, #betaSteps and #betaGets are filled by assets/launch-page.js
+       from assets/lib/launch.js. Plans & pricing (#pricingTrial, #plans, #pricingNotes) comes from
+       assets/pricing/plans.js; the guarantee note (#guarantee) takes its words from lib/launch.js and hides
+       itself after December 31, 2026 (Chicago time). Until the app's first update the Basic card states the
+       limits of the app now on Google Play, which the dashboard on this site also applies. -->
   <section aria-label="Availability">
     <div class="launchline">
       <b data-launch="onPlay"></b>
@@ -73,7 +80,7 @@
   </section>
 
   <section>
-    <h3 class="sec">What you need</h3>
+    <h2 class="sec">What you need</h2>
     <div class="promise">
       <div><b>The car</b><span data-launch="carNeed"></span></div>
       <div><b>An Android phone</b><span><span data-launch="auto"></span> <span data-launch="watch"></span>
@@ -88,7 +95,7 @@
   </section>
 
   <section id="dashboard" aria-labelledby="dashTitle">
-    <h3 class="sec" id="dashTitle" data-launch="dashTitle"></h3>
+    <h2 class="sec" id="dashTitle" data-launch="dashTitle"></h2>
     <div class="dash">
       <div>
         <p data-launch="dashWhat"></p>
@@ -99,17 +106,19 @@
     </div>
   </section>
 
-  <section>
-    <h3 class="sec">Plans</h3>
-    <p class="note" data-launch="trial"></p>
-    <div id="plans" class="plans"></div>
-    <p class="note" data-launch="priceNote"></p>
-    <div id="guarantee" class="guarantee"></div>
+  <!-- Plans & pricing. The header's "Plans & pricing" button links here. Three cards side by side on a
+       wide screen, stacked on a phone. -->
+  <section id="pricing" aria-labelledby="pricingTitle">
+    <h2 class="sec" id="pricingTitle">Plans &amp; pricing</h2>
+    <p class="pricing-lead" id="pricingTrial"></p>
+    <div id="plans" class="pricing"></div>
+    <div id="pricingNotes" class="pricing-notes"></div>
+    <div id="guarantee" class="guarantee" hidden></div>
   </section>
 
   <!-- The volunteer beta. The app's "coming soon" line points here (vehicle/VehicleSupport.kt BETA_URL). -->
   <section id="beta" aria-labelledby="betaTitle">
-    <h3 class="sec" id="betaTitle" data-launch="betaTitle"></h3>
+    <h2 class="sec" id="betaTitle" data-launch="betaTitle"></h2>
     <div class="beta">
       <p data-launch="betaWhat"></p>
       <div class="promise">
@@ -124,7 +133,7 @@
   </section>
 
   <section>
-    <h3 class="sec">Support</h3>
+    <h2 class="sec">Support</h2>
     <p style="color:var(--muted)">Questions, feedback or account requests:
     <a href="mailto:support@gateeng.com">support@gateeng.com</a>. We read everything — most messages
     get a reply within a day or two.</p>

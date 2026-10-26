@@ -75,6 +75,8 @@ header.bar{display:flex;align-items:center;gap:8px;padding:12px 0 4px;flex-wrap:
   background:transparent;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--dim);text-decoration:none}
 .btn.primary{background:linear-gradient(92deg,var(--cyan),var(--green));color:#04121f;border:0}
+/* the light theme's darker gradient needs white text to reach 4.5:1 at both ends */
+:root[data-theme="light"] .btn.primary{color:#fff}
 .btn[aria-disabled="true"]{opacity:.45;cursor:default}
 .btn svg{width:16px;height:16px;flex:none}
 
@@ -84,7 +86,9 @@ header.bar{display:flex;align-items:center;gap:8px;padding:12px 0 4px;flex-wrap:
 .hero h1 span{background:linear-gradient(92deg,var(--cyan),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* ── 3D carousel ────────────────────────────────────────────────────────────── */
-.stage{position:relative;height:456px;perspective:1250px;margin:10px 0 0}
+/* overflow-x:clip: on a phone the side screens reach past the edge and would widen the whole page (the
+   browser then shrinks everything to fit); clip, unlike hidden, keeps the 3D ring and the vertical overflow */
+.stage{position:relative;height:456px;perspective:1250px;margin:10px 0 0;overflow-x:clip}
 .ring{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.22,.9,.28,1)}
 .slide{position:absolute;left:50%;top:0;width:214px;height:440px;margin-left:-107px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -198,7 +202,7 @@ header.bar{display:flex;align-items:center;gap:8px;padding:12px 0 4px;flex-wrap:
 
 /* ── promises + footer ─────────────────────────────────────────────────────── */
 section{padding:26px 0}
-h3.sec{font-size:.85em;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin:0 0 16px}
+h2.sec,h3.sec{font-size:.85em;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin:0 0 16px}
 .promise{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
 .promise div{border-left:2px solid var(--green);padding-left:14px}
 .promise b{display:block}
@@ -208,26 +212,46 @@ footer{border-top:1px solid var(--line);margin-top:16px;padding:22px 0 40px;colo
   font-size:.9em;text-align:center}
 footer a{margin:0 7px;display:inline-block}
 
-/* ── launch: which car, plans, launch price guarantee (the words: assets/lib/launch.js) ─── */
+/* ── launch: which car (the words: assets/lib/launch.js) ─── */
 .launchline{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 20px;
   display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
 .launchline b{color:var(--ink)}
 .launchline span,.launchline a{font-size:.95em}
 .launchline span{color:var(--muted)}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:0 0 12px}
-.plan{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
-.plan b{display:block;font-size:1.15em}
-.plan .price{color:var(--green);font-weight:700;margin:2px 0 6px}
-.plan span{color:var(--muted);font-size:.95em}
-.plan ul{margin:10px 0 0;padding-left:1.1em;color:var(--muted);font-size:.92em}
-.plan li{margin-bottom:4px}
-.plan-max{border-color:var(--c-auto)}
 .note{color:var(--muted);font-size:.88em}
-.guarantee{border-left:2px solid var(--amber);padding:2px 0 2px 14px;margin-top:18px}
+
+/* ── Plans & pricing (#pricing; the words: assets/pricing/plans.js) ──
+   One column on a phone; three cards side by side once each can be about 270px wide. */
+.pricing-lead{margin:0 0 16px;max-width:72ch}
+.pricing{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin:0 0 16px}
+@media (min-width:880px){.pricing{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pp{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;min-width:0;
+  overflow-wrap:break-word}
+.pp-max{border-color:var(--c-auto)}
+.pp h3{margin:0 0 4px;font-size:1.25em;letter-spacing:.2px}
+.pp p{margin:0}
+.pp-price{color:var(--green);font-size:1.05em}
+.pp-price b{font-size:1.45em;font-weight:800}
+.pp-alt{color:var(--muted);font-size:.9em}
+.pp .pp-who{margin-top:10px;color:var(--ink)}
+.pp .pp-intro{margin-top:12px;font-weight:700;font-size:.93em}
+.pp-checks{list-style:none;margin:10px 0 0;padding:0;font-size:.93em}
+.pp-checks li{position:relative;padding-left:1.6em;margin-bottom:6px}
+/* a drawn tick, not a character: nothing for a screen reader to read out on every line */
+.pp-checks li::before{content:"";position:absolute;left:.4em;top:.3em;width:.38em;height:.7em;
+  border:solid var(--green);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.pp-limits{margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--line);display:grid;gap:10px}
+.pp-limits dt{font-size:.74em;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.pp-limits dd{margin:2px 0 0;font-size:.93em}
+.pp-limits dd.pp-off{color:var(--muted)}
+.pp-note{display:block;color:var(--muted);font-size:.92em;margin-top:3px}
+.pricing-notes{color:var(--muted);font-size:.92em;overflow-wrap:break-word}
+.pricing-notes p{margin:0 0 8px;max-width:80ch}
+.pricing-notes .pp-cta{margin:14px 0 0;font-size:1rem}
+.pricing-notes .btn{white-space:normal;text-align:center}
+.guarantee{border-left:2px solid var(--amber);padding:2px 0 2px 14px;margin-top:18px;font-size:.9em}
 .guarantee b{display:block}
-.guarantee span{color:var(--muted);font-size:.95em;display:block}
-.guarantee ul{margin:6px 0;padding-left:1.1em;color:var(--muted);font-size:.92em}
-.guarantee .fine{font-size:.88em}
+.guarantee span{color:var(--muted);display:block}
 
 /* ── the web dashboard ── */
 .dash{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
@@ -245,7 +269,8 @@ footer a{margin:0 7px;display:inline-block}
 .beta-steps{margin:0 0 12px;padding-left:1.3em;color:var(--muted)}
 .beta-steps li{margin-bottom:6px}
 .beta .btn{margin-top:6px}
-#beta,#dashboard{scroll-margin-top:12px}
+.beta > p.beta-join{margin:0 0 8px;font-weight:600}
+#beta,#dashboard,#pricing{scroll-margin-top:12px}
 
 /* ── email-link landing (confirmed.html) and the product page's notice (assets/auth-landing.js) ── */
 .brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);font-weight:800;letter-spacing:.3px}
@@ -291,7 +316,7 @@ footer .fine{margin-top:10px}
   .readout{padding:18px}
   .landing{margin-top:5vh;padding:20px 18px 16px}
   .landing h1{font-size:1.3em}
-  .stage{height:420px}
+  .stage{height:420px;margin-left:-16px;margin-right:-16px} /* clip at the screen's edge, not the gutter */
   .slide{width:186px;height:404px;margin-left:-93px}
   .watch .face{width:150px;height:150px}
   .head .unit{width:180px}
