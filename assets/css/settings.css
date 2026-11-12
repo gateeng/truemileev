@@ -24,6 +24,9 @@
 .settings-list a .ico{color:var(--c-garage)}
 .settings-vstatic .ico{color:var(--dim)}
 .settings-vname{overflow:hidden;text-overflow:ellipsis}
+.settings-vlocked .settings-vname{color:var(--muted)}
+.settings-vlock{color:var(--muted);font-weight:400;font-size:.8rem}
+.settings-locknote{margin:8px 0 0}
 .settings-vcount{color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
 
 .settings-h{font-size:.9rem;font-weight:600;margin:16px 0 6px}

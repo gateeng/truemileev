@@ -2,8 +2,9 @@
 // Business mileage), filter it, choose what it shows, add your own title / subtitle / running header /
 // footer / footnote, style it (template, accent, font, size, paper, margins, logo), see it live on a
 // scaled paper, then print it or save it as a PDF (the browser's own print dialog; no PDF library).
-// Exports sit here too: the Report CSV (Pro), My data CSV (every plan) and the issued, verifiable
-// business mileage PDFs the app made.
+// Exports sit here too: the Report CSV (Pro), My data CSV (Pro and up; Basic gets the simple report of
+// what it sees, owner B5, views/simplereport.js) and the issued, verifiable business mileage PDFs the
+// app made.
 // The design is per browser (tm.report.design, tm.report.logo); nothing is uploaded. Every piece of
 // reader text is escaped where it is shown (lib/reportdesign.js docHtml), and the @page rule is built
 // from enum values only.
@@ -30,8 +31,9 @@ import {
   loadDesign, saveDesign, saveLogo, setPageCss, clearPageCss, bindPrintTitle, envFor, periodFromQuery,
   buildPeriod, buildJourney, buildMileage, scopeJourneys, journeyRouteSvg, generatedOn,
 } from "./print.js";
+import { mountSimpleReport } from "./simplereport.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const DOCS = [
   { id: "period", label: "Period report", feature: "periodPrint", kind: "report" },
@@ -83,6 +85,8 @@ export function mount(el, ctx) {
   let issuedRows = null;         // the issued mileage reports, once loaded
   const routeSvg = new Map();    // journey id → svg ("" none) | "loading" | "error"
   const controls = [];
+  const myDataOk = allows(tier, "myData");   // B5: the full download is Pro and up
+  let simple = null;             // Basic's simple-report block (views/simplereport.js), while shown
   const storeOk = typeof store.writable === "function" ? store.writable() : true;
 
   let scope = scopeFor(st.veh);
@@ -375,12 +379,17 @@ export function mount(el, ctx) {
       `<p class="note">In the print dialog choose “Save as PDF” to keep a file. Chrome names it after the document.</p>` +
       `<div class="rpt-msg rpt-csvmsg" aria-live="polite"></div>` +
       `<h3 class="rpt-sub">My data</h3>` +
-      `<p class="note">Every drive and charging session of a vehicle, in the units they were recorded in (mi, °F), with each drive's route. One CSV file per vehicle, on every plan.</p>` +
-      `<div class="rpt-btns">` +
-      scopeVs.map((v) => `<button type="button" class="btn" data-act="mydata" data-vid="${esc(v.id)}">${icon("download", { size: 18 })}<span>${esc(scopeVs.length > 1 ? nameAll.get(v.id) : "Download my data")}</span></button>`).join("") +
-      `</div><div class="rpt-msg rpt-mymsg" aria-live="polite"></div>` +
+      (myDataOk
+        ? `<p class="note">Every drive and charging session of a vehicle, in the units they were recorded in (mi, °F), with each drive's route. One CSV file per vehicle.</p>` +
+          `<div class="rpt-btns">` +
+          scopeVs.map((v) => `<button type="button" class="btn" data-act="mydata" data-vid="${esc(v.id)}">${icon("download", { size: 18 })}<span>${esc(scopeVs.length > 1 ? nameAll.get(v.id) : "Download my data")}</span></button>`).join("") +
+          `</div><div class="rpt-msg rpt-mymsg" aria-live="polite"></div>`
+        // Basic (B5): the simple report of what it sees, for the vehicles of this report's choice.
+        : `<div class="rpt-simple"></div>`) +
       `<h3 class="rpt-sub">Issued business mileage reports</h3>` +
       `<div class="rpt-issued"><p class="note">Loading…</p></div>`;
+    if (simple) { simple.destroy(); simple = null; }
+    if (!myDataOk) simple = mountSimpleReport(box.querySelector(".rpt-simple"), ctx, { vehicles: scopeVs, names: nameAll });
     drawIssued();
   }
 
@@ -560,7 +569,7 @@ export function mount(el, ctx) {
   async function downloadMyData(vid, btn) {
     const msg = $(".rpt-mymsg");
     const v = allVehicles.find((x) => x.id === vid);
-    if (!v) return;
+    if (!v || !msg || !myDataOk) return;
     const trips = acct.trips.filter((t) => t.vehicleId === vid);
     const charges = acct.charges.filter((c) => c.vehicleId === vid);
     if (!trips.length && !charges.length) { msg.innerHTML = `<p class="msg info">No data yet</p>`; return; }
@@ -738,6 +747,7 @@ export function mount(el, ctx) {
       clearTimeout(previewTimer);
       if (saveTimer) { clearTimeout(saveTimer); saveDesign(design); }
       destroyControls();
+      if (simple) { simple.destroy(); simple = null; }
       if (ro) ro.disconnect();
       cancelAnimationFrame(fitFrame);
       window.removeEventListener("resize", onWinResize);

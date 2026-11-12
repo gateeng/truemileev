@@ -10,7 +10,7 @@ import { parts, daysBetween } from "./tz.js";
 import { tripDuration } from "./format.js";
 import { isEnergyMeasured } from "./rows.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const EN_DASH = "–";

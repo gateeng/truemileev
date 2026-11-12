@@ -24,14 +24,16 @@ web/truemileev/
   assets/views/*.js     one module per section or detail page: account, garage, financial, charges
                         (Charge), charge, map_section (Map), trips, trip, journeys, journey, report,
                         print, settings; plus the shared tilegrid, rangebar, typefilter, carfilter,
-                        charts and mapview (the only module that loads MapLibre)
+                        charts, simplereport (Basic's downloads) and mapview (the only module that
+                        loads MapLibre)
   assets/css/*.css      per-section styles
   assets/vendor/        MapLibre GL JS 6.11.2 (BSD-3-Clause) and the Material icons license
                         (Apache-2.0); byte-identical copies, hashes pinned by the tests
 ```
 
-The sections, in the sidebar's order: **Account** (email, sign-in method, plan and trial, how to
-upgrade and manage payments in Google Play, My data CSV, delete account), **Garage** (vehicle, door-jamb
+The sections, in the sidebar's order: **Account** (email, sign-in method, plan and trial, the Basic /
+Pro / Max comparison, how to upgrade and manage payments in Google Play, My data CSV on Pro and Max or
+Basic's simple report, delete account), **Garage** (vehicle, door-jamb
 label values, tires, tow and trailers, home charger, insights, diagnostics), **Financial** (the Board
 figures, total paid, saved, efficiency, spend by network, memberships kept in this browser, monthly
 table, cost charts), **Charge** (tiles, a filterable charge list, a map of charge locations, charge
@@ -195,10 +197,29 @@ vectors, and they check the rules below across every published file.
    public URL or a third-party payload turns storage into publication. The dashboard never selects
    the VIN column, never shows a VIN and never prints charge coordinates on a page or in a PDF; on
    screen, charge locations show on the maps only, and home pins are hidden unless you turn them on.
-   The two CSV files are the exception, as in the app: the Report CSV and the My data CSV carry each
+   The CSV files are the exception, as in the app: the Report CSV and the My data CSV carry each
    charge's GPS column exactly as the app's own exports do (`csv_test.js` pins it). Dropping it from the
-   Report CSV is an open owner decision (§6). Garage → Tow shows the tow
+   Report CSV is an open owner decision (§6). Basic's simple report (owner B5) carries less: each
+   drive's first and last route point and each charge's position, rounded to three decimals (about
+   110 m, the app's own fallback), and a home charge reads "Home", never its position
+   (`basic_quota_test.js` pins it). Garage → Tow shows the tow
    capacity's value, never its key (the key contains the VIN).
+8. **Basic's monthly quota is presentation only (owner B1-B5, 10/11; `lib/gates.js`, the app's
+   `BasicQuota.kt`).** Basic lists, per vehicle and per calendar month in the browser's zone, the first
+   30 drives, every home and AC charge and the first 4 DC charges, for this month and last month; a
+   drive waiting for its car answer and a charge still unconfirmed are always listed (each still takes
+   its place: among the 30, or among the 4 DC). Ties on one instant go by the phone's client id, then
+   the row id. The rest show as one summary per list ("18 more drives this month. Upgrade to see
+   them."), shown when the list leaves something out and counting this month and last month over the
+   WHOLE months, whatever range is on screen (`quotaLockedForList`, the app's
+   `BasicQuota.lockedForList`); a locked charge's page shows only why. The
+   clock is `quotaNow`: the browser's, floored by the server's reading of the page load
+   (`my_effective_tier.now_epoch_ms`), so a computer set back to an earlier date opens no earlier month
+   (Pro's windows and period print read it too). Every total, average, tile, chart and the Board count
+   every row. Basic downloads the simple report of what it sees, this month and last
+   (`views/simplereport.js`, the cells and order of the app's `SimpleReport.kt`); Pro and Max keep My
+   data and the Report CSV. A complete copy on request (B6) is promised in the Terms only; the
+   dashboard does not repeat it (owner 10/11).
 
 ## 6. Not here yet
 

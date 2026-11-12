@@ -66,10 +66,9 @@
   <div id="readout" class="readout" aria-live="polite"></div>
 
   <!-- Launch copy: every [data-launch] slot, #betaSteps and #betaGets are filled by assets/launch-page.js
-       from assets/lib/launch.js. Plans & pricing (#pricingTrial, #plans, #pricingNotes) comes from
-       assets/pricing/plans.js; the guarantee note (#guarantee) takes its words from lib/launch.js and hides
-       itself after December 31, 2026 (Chicago time). Until the app's first update the Basic card states the
-       limits of the app now on Google Play, which the dashboard on this site also applies. -->
+       from assets/lib/launch.js, the one place the launch wording lives. Plans & pricing (#pricingTrial,
+       #plans, #pricingNotes, #guarantee) comes from assets/lib/plans.js, the rows the dashboard's own plan
+       table shows; the guarantee note hides itself after December 31, 2026 (Chicago time). -->
   <section aria-label="Availability">
     <div class="launchline">
       <b data-launch="onPlay"></b>
@@ -116,7 +115,9 @@
     <div id="guarantee" class="guarantee" hidden></div>
   </section>
 
-  <!-- The volunteer beta. The app's "coming soon" line points here (vehicle/VehicleSupport.kt BETA_URL). -->
+  <!-- The volunteer beta. The app's "coming soon" line points here (vehicle/VehicleSupport.kt BETA_URL). Self-serve
+       since the first update after launch: the join happens in the app (Garage › Diag › Join the beta), so the
+       button is the Google Play listing, never an email. -->
   <section id="beta" aria-labelledby="betaTitle">
     <h2 class="sec" id="betaTitle" data-launch="betaTitle"></h2>
     <div class="beta">
@@ -128,7 +129,8 @@
       <b class="beta-h">What you do</b>
       <ol id="betaSteps" class="beta-steps"></ol>
       <p class="note" data-launch="betaFileNote"></p>
-      <a class="btn primary" data-launch-href="beta" href="mailto:support@gateeng.com" data-launch="betaCta"></a>
+      <p class="beta-join" data-launch="betaJoin"></p>
+      <a class="btn primary" data-launch-href="play" href="https://play.google.com/store/apps/details?id=com.gateengineering.truemileev" data-launch="betaCta"></a>
     </div>
   </section>
 

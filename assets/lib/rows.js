@@ -7,7 +7,7 @@
 import { dist, labels } from "./units.js";
 import { fixed, dateFmt } from "./format.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const str = (v) => (v === null || v === undefined ? "" : String(v));
@@ -112,6 +112,9 @@ export function normCharge(r) {
   return {
     id: str(r.id),
     vehicleId: str(r.vehicle_id),
+    // The id the phone gave the charge (the same on every device): Basic's quota breaks a tie on it,
+    // as the app does (BasicQuota.chargeRow).
+    clientChargeId: str(r.client_charge_id),
     date: num(r.date_epoch),
     timeMin,
     startMileage: num(r.start_mileage),

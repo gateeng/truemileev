@@ -5,7 +5,7 @@
 import { lockText } from "./gates.js";
 import { icon } from "./icons.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** The icon helper, re-exported so a view needs one import for markup (lib/icons.js icon()). */
 export { icon as iconHtml };
@@ -50,6 +50,14 @@ export const pill = (text, cls = "") => h`<span class="pill${cls ? " " + cls : "
 
 /** The one lock line for a gated feature: the lock icon, then "Available with Pro" / "… Max". */
 export const lockNote = (feature) => h`<p class="note lock">${raw(icon("lock", { size: 16 }))}<span>${lockText(feature)}</span></p>`;
+
+/**
+ * B4: a Basic list's one summary of the rows past its monthly quota (gates.quotaSummary text, escaped
+ * here), with a link to the plans on Account. Markup string, for the views that build strings.
+ */
+export const quotaNoteHtml = (text) =>
+  `<div class="quota-locked"><p class="note lock">${icon("lock", { size: 16 })}<span>${esc(text)}</span>` +
+  `<a class="quota-plans" href="#/account">See plans</a></p></div>`;
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];

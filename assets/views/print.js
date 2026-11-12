@@ -21,7 +21,7 @@ import {
 } from "../lib/reportdesign.js";
 import * as api from "../lib/api.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const TRIP_COLORS = ["#22C55E", "#3B82F6", "#F59E0B", "#A855F7", "#14B8A6"];
 const PAGE_STYLE_ID = "rpt-page";
@@ -227,7 +227,9 @@ function decodeSeg(s) {
 function scopeOf(ctx, q) {
   const want = q && q.veh ? String(q.veh) : "";
   if (want && typeof ctx.scopeFor === "function") {
-    const ok = want === "all" || (ctx.account.vehicles || []).some((v) => v.id === want);
+    // Never a vehicle the plan does not include (the app's plan choice, owner D2).
+    const locked = ctx.planLocks && ctx.planLocks.locked instanceof Set ? ctx.planLocks.locked : new Set();
+    const ok = want === "all" || (ctx.account.vehicles || []).some((v) => v.id === want && !locked.has(v.id));
     if (ok) { try { return ctx.scopeFor(want); } catch (_) { /* the page's own scope */ } }
   }
   return ctx.scope;

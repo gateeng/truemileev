@@ -30,10 +30,12 @@ import {
   CODE_MIN_LENGTH, CODE_MAX_LENGTH, MIN_PASSWORD_LENGTH, classifySend, classifyVerify, classifyUpdate,
 } from "./recovery.js";
 
+import { planChoiceFrom } from "./gates.js";
+
 /** Re-exported: the door-jamb keys api.garage() selects (never the VIN, raw OCR or confidence). */
 export { JAMB_KEYS };
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const REST_TABLES = ["vehicles", "trip_log", "charge_session", "phantom_losses", "trip_notes",
   "user_settings", "charge_curve_log", "tax_reports", "tire_records", "dtc_scans"];
@@ -71,6 +73,8 @@ export const ALLOWED = Object.freeze({
 const SESSION_KEY = "tm_session";
 /** The Google sign-in's PKCE verifier, kept in this tab from the click until Google sends it back. */
 const PKCE_KEY = "tm_pkce";
+/** "Open the delete dialog again after this sign-in" (deleteReturn below), kept in this tab. */
+const DELETE_RETURN_KEY = "tm_delete_return";
 /** What a sign-in return may append to the query: GoTrue's error fields and the PKCE code. */
 const ERROR_KEYS = ["error", "error_code", "error_description"];
 const RETURN_KEYS = [...ERROR_KEYS, "code"];
@@ -684,8 +688,70 @@ export const auth = {
       } catch (_) { /* the local session goes either way */ }
     }
     clearSession();
+    // A sign-out ends any "delete after signing in again" too (the sign-in-again flow marks it AFTER
+    // its own sign-out), so the next sign-in in this tab never opens the delete dialog by surprise.
+    deleteReturn.clear();
     me = null;
   },
+};
+
+// ── Delete account: sign in again first (audit 9/30, F24) ──────────────────────────────────────
+// When app_config.delete_account_max_auth_age_s is above 0, delete_account answers
+// 401 {"error":"Sign in again to delete your account","code":"reauth_required","step":"reauth"} unless
+// this session's sign-in is recent. The time is the token's `amr` (when the user really signed in),
+// which a token refresh does not move: only a new sign-in satisfies it. The Account page then signs
+// this tab out, marks the return here, and opens the delete dialog again once the same account has
+// signed in (app.js enter()).
+
+/** delete_account's code for "sign in again first". */
+export const REAUTH_CODE = "reauth_required";
+
+/** True when [err] (thrown by request()) is delete_account's "sign in again" reply. */
+export function isReauthRequired(err) {
+  if (!err || err.status !== 401) return false;
+  try {
+    const j = JSON.parse(String(err.detail || ""));
+    return !!j && typeof j === "object" && (j.code === REAUTH_CODE || j.step === "reauth");
+  } catch (_) {
+    return false;
+  }
+}
+
+/** A return mark older than this is ignored (the sign-in was abandoned). */
+export const DELETE_RETURN_MAX_MS = 30 * 60 * 1000;
+
+function readDeleteReturn() {
+  try {
+    const r = JSON.parse((storage && storage.getItem(DELETE_RETURN_KEY)) || "null");
+    return r && typeof r === "object" && typeof r.uid === "string" && Number.isFinite(r.at) ? r : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+const freshMark = (r, nowMs) => !!r && r.at <= nowMs + 60_000 && nowMs - r.at <= DELETE_RETURN_MAX_MS;
+
+/**
+ * "Open the delete dialog again after this sign-in", in this tab's storage (it survives the trip to
+ * Google and back). Holds the account's id and the time only, and is consumed by the next sign-in:
+ * the dialog opens again only for the same account, within DELETE_RETURN_MAX_MS.
+ */
+export const deleteReturn = {
+  /** Marks the return for [userId]; false when it could not be stored (or there is no id). */
+  mark(userId, nowMs = Date.now()) {
+    const uid = String(userId ?? "");
+    if (!uid || !storage) return false;
+    try { storage.setItem(DELETE_RETURN_KEY, JSON.stringify({ uid, at: nowMs })); return true; } catch (_) { return false; }
+  },
+  /** A fresh mark is waiting (the sign-in page says why it is asking). */
+  pending(nowMs = Date.now()) { return freshMark(readDeleteReturn(), nowMs); },
+  /** Consumes the mark: true only when it is fresh and was made for [userId]. */
+  take(userId, nowMs = Date.now()) {
+    const r = readDeleteReturn();
+    deleteReturn.clear();
+    return freshMark(r, nowMs) && !!userId && r.uid === String(userId);
+  },
+  clear() { try { storage && storage.removeItem(DELETE_RETURN_KEY); } catch (_) { /* no storage */ } },
 };
 
 /** A session access token (a JWT: three base64url parts) as Supabase appends it to an email link. */
@@ -812,7 +878,7 @@ const SEL_CHARGES = "id,vehicle_id,date_epoch,time_minutes,start_mileage,end_mil
   "arrival_soc_pct,departure_soc_pct,total_kwh,received_kwh,total_dollars,charger_fee,rate_per_kwh," +
   "rate_per_hour,total_overridden,cost_per_kwh,network,style,gps_location,temp_f,ac_pct,gas_price_at_charge," +
   "is_merged,split_session,split_session_group_id,is_seed_data,edited_epoch,confidence,notes,charger_type," +
-  "charger_power_kw";
+  "charger_power_kw,client_charge_id";
 // The cost column's cloud name is internal; the alias keeps it out of every later line of code.
 const SEL_PARKED = "id,vehicle_id,entry_type,event_epoch,kwh,cost:fifo_cost,park_hours,ambient_temp_f," +
   "temp_data_missing,hvac_mode,kwh_per_hour";
@@ -821,8 +887,14 @@ const SEL_NOTES = "id,client_trip_id,body,created_epoch,updated_epoch";
 // keys, and the phone's vehicle id contains the VIN; the home object also holds the home's location,
 // which is never read. The tow capacity has no scalar form (it is keyed by that same id), so it is read
 // whole, used as get_stats' cap, and shown as its value only, never its key (README rule 7).
+// The plan choice (owner D2: which vehicles and trailers stay in use when the plan includes fewer than the
+// account holds) by its cloud-id lists and limits only — its "keep" list of phone vehicle ids can carry
+// the VIN, so it is never selected; the trailer ids are the library's own random client ids.
 const SEL_SETTINGS = "mpg:settings->fuel->mpg,gasPrice:settings->fuel->gasPrice,fuelLabel:settings->fuel->label," +
-  "homeRate:settings->home->rate,towCapacity:settings->towCapacity";
+  "homeRate:settings->home->rate,towCapacity:settings->towCapacity," +
+  "pcKeepCloud:settings->planChoice->vehicles->keepCloud,pcHeldCloud:settings->planChoice->vehicles->heldCloud," +
+  "pcVehLimit:settings->planChoice->vehicles->limit,pcTrailerKeep:settings->planChoice->trailers->keep," +
+  "pcTrailerLimit:settings->planChoice->trailers->limit";
 const SEL_CURVE = "epoch_ms,soc_pct,power_kw,batt_temp_f,voltage_v,current_a";
 const SEL_TAX = "report_id,year,period_start,period_end,business_miles,business_pct,total_miles,distance_unit," +
   "storage_path,created_at";
@@ -942,6 +1014,8 @@ function buildAccount(raw, user) {
     },
     homeRate: Number.isFinite(homeRate) && homeRate > 0 ? homeRate : 0,
     towCap: caps.length === 1 ? caps[0] : 0,
+    // The app's plan choice (gates.planLocks / trailerKeep decide what it locks under the plan).
+    planChoice: planChoiceFrom(settings),
     tier: tierFrom(raw.tier),
   };
 }

@@ -1,35 +1,33 @@
 // TrueMile EV — the launch copy on the public pages (the product page and the adapters page).
-// Every word comes from lib/launch.js and, for Plans & pricing, from pricing/plans.js; this file only puts
-// it in place.
-// Until the app's first update (vc28) Plans & pricing reads assets/pricing/, a copy of the source's
-// lib/plans.js and the modules it imports (gates, tz, rows, units, format), so the web dashboard keeps the
-// plan rules of the app now on Google Play; the vc28 publish replaces this with the source's lib/ and
-// deletes assets/pricing/. The beta still joins by email until then.
+// Every word comes from lib/launch.js and, for Plans & pricing, from lib/plans.js (the dashboard's plan
+// table reads the same rows, so the page and the dashboard can never disagree); this file only puts it
+// in place:
 //   [data-launch="key"]      gets launchText()[key] as its text
-//   [data-launch-href="beta"] gets the beta sign-up mailto: link (subject and body template)
+//   [data-launch-href="play"] gets the app's Google Play listing (the beta joins in the app, never by email)
 //   [data-launch-href="dash"] gets the web dashboard's address
 //   #pricingTrial            gets the trial note (the Plans & pricing section, id="pricing")
 //   #plans                   gets the three plan cards: Basic, Pro and Max
 //   #pricingNotes            gets how to subscribe and cancel, the price note, the button
 //   #guarantee               gets the launch price guarantee while it is offered, and is hidden after it
-//                            (pricing/plans.js guaranteeOpen: through December 31, 2026, Chicago time, read
+//                            (lib/plans.js guaranteeOpen: through December 31, 2026, Chicago time, read
 //                            from the viewer's clock when the page is shown)
 //   #betaSteps / #betaGets   get the beta's steps and what a volunteer gets
 //   #adapterList             gets the proven adapters
 // Importable without a DOM (the web tests call the builders directly).
 
-import { LAUNCH, launchText, betaMailto } from "./lib/launch.js";
+import { LAUNCH, launchText } from "./lib/launch.js";
 import {
   PLAY_LISTING, PLAY_SUBSCRIPTIONS, TERMS_URL, PRICING, pricingPlans, guaranteeOpen,
-} from "./pricing/plans.js";
+} from "./lib/plans.js";
 
-/** The app's Google Play listing: the pricing button. pricing/plans.js PLAY_LISTING. */
+/** The app's Google Play listing: the beta's button and the pricing button (the join itself happens in the
+ *  app). lib/plans.js PLAY_LISTING, the dashboard's own; web/tests/launch_test.js checks they match. */
 export const PLAY_URL = PLAY_LISTING;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-/** [text], escaped, with its one [word] turned into a link to [href] (the words stay pricing/plans.js's). */
+/** [text], escaped, with its one [word] turned into a link to [href] (the words stay lib/plans.js's). */
 const linked = (text, word, href) =>
   esc(text).replace(esc(word), `<a href="${esc(href)}">${esc(word)}</a>`);
 
@@ -38,7 +36,7 @@ export function pricingTrialHtml() {
   return esc(PRICING.trial);
 }
 
-/** The three plan cards (pricing/plans.js pricingPlans), as HTML: a heading, the prices, who it is for, the
+/** The three plan cards (lib/plans.js pricingPlans), as HTML: a heading, the prices, who it is for, the
  *  features as a checklist and the plan's four limits as a description list. */
 export function plansHtml() {
   return pricingPlans().map((p) => `
@@ -55,8 +53,8 @@ export function plansHtml() {
     </article>`).join("");
 }
 
-/** Under the cards: where to subscribe and cancel, what the prices are, and the button (no line about a
- *  complete copy of one's data, owner 10/11). */
+/** Under the cards: where to subscribe and cancel, what the prices are, and the button. (A complete copy of
+ *  one's data on request is in the Terms only; the page does not repeat it, owner 10/11.) */
 export function pricingNotesHtml() {
   return `
     <p>${esc(PRICING.buy)} <a href="${esc(PLAY_SUBSCRIPTIONS)}">${esc(PRICING.manage)}</a></p>
@@ -97,7 +95,7 @@ export function fillLaunch(doc, nowMs = Date.now()) {
     const v = text[el.getAttribute("data-launch")];
     if (typeof v === "string") el.textContent = v;
   }
-  for (const a of doc.querySelectorAll('[data-launch-href="beta"]')) a.setAttribute("href", betaMailto());
+  for (const a of doc.querySelectorAll('[data-launch-href="play"]')) a.setAttribute("href", PLAY_URL);
   for (const a of doc.querySelectorAll('[data-launch-href="dash"]')) a.setAttribute("href", LAUNCH.dashboard.href);
   const fill = (id, html) => { const el = doc.getElementById(id); if (el) el.innerHTML = html; return el; };
   fill("pricingTrial", pricingTrialHtml());

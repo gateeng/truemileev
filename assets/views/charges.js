@@ -6,7 +6,7 @@
 // app's Report does. Also exports the session row the Journey page reuses and the learned-curve block
 // Garage reuses.
 
-import { esc, store, openSheet } from "../lib/dom.js";
+import { esc, store, openSheet, quotaNoteHtml } from "../lib/dom.js";
 import { icon } from "../lib/icons.js";
 import * as api from "../lib/api.js";
 import { mountRangeBar } from "./rangebar.js";
@@ -18,7 +18,7 @@ import { fixed, money, hm, dateFmt, MONTHS } from "../lib/format.js";
 import { dist, labels } from "../lib/units.js";
 import { tileWindow, halfCustomWindow, RANGES, steppable } from "../lib/periods.js";
 import { inScope, isDc, isHome, vehicleLabel, ownTrips } from "../lib/rows.js";
-import { allows, lockText, chargeListWindow, listWindowNote, tierOf } from "../lib/gates.js";
+import { allows, lockText, chargeListWindow, listWindowNote, tierOf, quotaApplies, quotaSummary, quotaNow, quotaLockedForList } from "../lib/gates.js";
 import { groupCharges } from "../lib/stops.js";
 import { learnDcCurve, bandOf, BAND_LABELS } from "../lib/curve.js";
 import { boundsOf } from "../lib/mapdata.js";
@@ -28,7 +28,7 @@ import {
 } from "../lib/chargefilter.js";
 import { dcSessions, homeShare, avgSessionKwh, fees, networkKey } from "../lib/finance.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** sessionStorage: the list's last hash, so a session's back link returns to the same filters. */
 export const CHARGE_QUERY_KEY = "tm.chargeQuery";
@@ -250,8 +250,13 @@ export function mount(el, ctx) {
   const scopeCharges = ctx.account.charges.filter((c) => inScope(c, ctx.scope));
   const scopeTrips = ctx.account.trips.filter((t) => inScope(t, ctx.scope));
   const ownAny = ownTrips(scopeTrips);
-  const windowIds = new Set(chargeListWindow(ctx.tier, scopeCharges, { nowMs: ctx.now(), zone }).map((c) => c.id));
+  // The tier's window over the scope's whole history (Basic: each vehicle's monthly quota; Pro: 6 months):
+  // it decides the list rows and the map's pins alike. One clock for the window and its summary: the
+  // browser's, floored by the server's (gates.quotaNow).
+  const qNow = quotaNow(ctx.tier, ctx.now());
+  const windowIds = new Set(chargeListWindow(ctx.tier, scopeCharges, { nowMs: qNow, zone }).map((c) => c.id));
   const windowCut = windowIds.size < scopeCharges.length;
+  const basic = quotaApplies(ctx.tier);
   const netOpts = networkOptions(scopeCharges);
   let stopsShown = STOP_CHUNK, tableShown = TABLE_CHUNK;
   let homeOn = homePinsOn();
@@ -446,13 +451,20 @@ export function mount(el, ctx) {
     const total = r.rows.length;
     const rows = r.rows.filter((c) => windowIds.has(c.id));
     const cut = windowCut && rows.length < total;
+    // Basic (B4): one short summary of the charges past its monthly quota, in place of Pro's footer, shown
+    // when this list leaves something out; this month and last month are the WHOLE months of the scope's
+    // charges (BasicQuota.lockedForList), whatever period and filters are on screen.
+    const lockedRows = r.rows.filter((c) => !windowIds.has(c.id));
+    const summary = basic && lockedRows.length
+      ? quotaSummary("charges", quotaLockedForList(scopeCharges, lockedRows, windowIds, qNow, zone), qNow, zone)
+      : null;
     const filtering = activeCount(st) > 0 || st.q.trim() !== "";
     const hidden = r.periodRows.length - total;
     let html = `<div class="card-head charges-listhead"><h3 class="card-title">Charge sessions (${total})` +
       (filtering && hidden > 0 ? `<span class="charges-hidden"> · ${hidden} hidden by filters</span>` : "") + `</h3>` +
       (filtering ? `<button type="button" class="btn ghost sm charges-clear" data-clearall="1">Clear filters</button>` : "") + `</div>`;
     if (!rows.length) {
-      html += `<p class="empty">${icon("ev_station")}<span>${total || !filtering ? "No charges in this period." : "No charges match these filters."}</span></p>`;
+      if (!summary) html += `<p class="empty">${icon("ev_station")}<span>${total || !filtering ? "No charges in this period." : "No charges match these filters."}</span></p>`;
     } else if (st.view === "grouped") {
       const g = groupCharges(rows, isHome);
       let body = "";
@@ -498,7 +510,8 @@ export function mount(el, ctx) {
         html += `<button type="button" class="btn ghost charges-more" data-more="table">Show ${Math.min(TABLE_CHUNK, sorted.length - tableShown)} more…</button>`;
       }
     }
-    if (cut || (windowCut && !rows.length && total)) {
+    if (summary) html += quotaNoteHtml(summary);
+    else if (!basic && (cut || (windowCut && !rows.length && total))) {
       const n = cut ? total - rows.length : total;
       html += `<div class="charges-locked"><p class="note">${esc(listWindowNote(ctx.tier, "charges") || "")}` +
         ` · ${n} older ${n === 1 ? "session" : "sessions"} not shown.</p>` +

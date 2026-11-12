@@ -13,7 +13,7 @@ import { dateFmt } from "./format.js";
 import { listFor, typeKey, classLabel, isShort } from "./rows.js";
 import { MI_TO_KM } from "./units.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const DAY = 86_400_000;
 
@@ -190,13 +190,14 @@ export function searchText(t, { nowMs, zone, notesByTrip } = {}) {
 }
 
 /**
- * applyTripFilter(trips, st, pieces) → {rows, listedCount, shortCount, cut}
+ * applyTripFilter(trips, st, pieces) → {rows, listedCount, shortCount, cut, locked}
  * [trips] = the scope's drives of every car status; pieces = {win (null = every date; undefined =
  * sectionWindow(st).listWin), nowMs, zone, notesByTrip, typesAllowed (default true; below Pro the type
  * filter shows locked and is not applied), windowIds (the tier's list window as a Set of ids, or null)}.
  * Order: date window → car (listFor) → type → towing → reconstructed → notes → distance → search;
  * listedCount counts those rows (the header's "TRIPS (N)"), shortCount the short ones among them; the
- * short-trip toggle and the tier window come last. rows are newest first (date, then id, descending).
+ * short-trip toggle and the tier window come last. rows are newest first (date, then id, descending);
+ * locked = the rows the tier window left out (what Basic's list summarizes, gates.quotaSummary).
  */
 export function applyTripFilter(trips, st, pieces = {}) {
   const all = trips || [];
@@ -218,7 +219,8 @@ export function applyTripFilter(trips, st, pieces = {}) {
   const shortCount = rows.filter(isShort).length;
   if (!st.short) rows = rows.filter((t) => !isShort(t));
   const before = rows.length;
+  const locked = pieces.windowIds ? rows.filter((t) => !pieces.windowIds.has(t.id)) : [];
   if (pieces.windowIds) rows = rows.filter((t) => pieces.windowIds.has(t.id));
   rows = [...rows].sort((a, b) => (b.date - a.date) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
-  return { rows, listedCount, shortCount, cut: !!pieces.windowIds && rows.length < before };
+  return { rows, listedCount, shortCount, cut: !!pieces.windowIds && rows.length < before, locked };
 }

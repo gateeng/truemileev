@@ -220,7 +220,7 @@ footer a{margin:0 7px;display:inline-block}
 .launchline span{color:var(--muted)}
 .note{color:var(--muted);font-size:.88em}
 
-/* ── Plans & pricing (#pricing; the words: assets/pricing/plans.js) ──
+/* ── Plans & pricing (#pricing; the words: assets/lib/plans.js, the dashboard's own plan rows) ──
    One column on a phone; three cards side by side once each can be about 270px wide. */
 .pricing-lead{margin:0 0 16px;max-width:72ch}
 .pricing{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin:0 0 16px}

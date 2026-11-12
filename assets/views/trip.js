@@ -23,7 +23,7 @@ import { distText, backToTripsHref, tripPills, hasNotes, vehicleNames, tripHref 
 import { mountMap } from "./mapview.js";
 import { routeFeatures, endMarkers, boundsOf, coordsOf } from "../lib/mapdata.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const LOCK = "🔒";
 

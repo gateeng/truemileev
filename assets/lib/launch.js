@@ -23,7 +23,7 @@
 //    except other EVs, and those have a volunteer beta (the product page's #beta section).
 // The internal accounting words never appear here (web/tests/wording_test.js checks every file).
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** The support address (mailto only; the page itself sends nothing anywhere). */
 export const SUPPORT_EMAIL = "support@gateeng.com";
@@ -44,43 +44,32 @@ export const LAUNCH = Object.freeze({
   comingSoon: "Other EVs are coming soon. Until then, TrueMile logs their drives by GPS only.",
   /** The beta hint for owners of other EVs: a link to the product page's #beta section. */
   betaHint: "Drive a different EV? Join the beta.",
-  /** The beta sign-up email's subject (owner 9/29: exactly this). */
-  betaSubject: "TrueMile beta",
-
-  /** The volunteer beta for EVs other than the Lightning (product page, section id="beta"). */
+  /** The volunteer beta for EVs other than the Lightning (product page, section id="beta").
+   *  Self-serve from the first update after launch (owner decisions 10/1; the rules and the server
+   *  contract are docs/BETA_PROGRAM.md): the volunteer joins in the app (Garage > Diag > Join the beta),
+   *  agrees once that each Test session file uploads automatically, the server checks every file, and
+   *  volunteer Max starts with the first session that passes. Nobody emails anybody to join. */
   beta: Object.freeze({
     title: "Beta for other EVs",
-    what: "Early builds of TrueMile EV for EVs other than the Ford F-150 Lightning. A model is supported only after it has been proven on a real car, and the beta is how that happens.",
-    /** Who can join: the models the app's vehicle list already carries, and any other EV. */
+    what: "TrueMile EV supports a model only after it has been proven on real cars, and the beta is how that happens: owners of other EVs join in the app, and their Test sessions show us what the car reports.",
+    /** Who can join: the models the app's vehicle list already carries, and the other coming-soon EVs in it. */
     models: Object.freeze(["Ford Mustang Mach-E", "Hyundai Ioniq 5", "Hyundai Ioniq 6", "Hyundai Kona Electric",
       "Kia EV6", "Kia Niro EV", "Chevrolet Bolt", "Nissan Leaf"]),
-    whoTail: "or of another EV, with a classic Bluetooth OBD-II adapter (the Vgate vLinker MC+ is the one we test on).",
+    whoTail: "or of another EV in the app's car list, with a classic Bluetooth OBD-II adapter (the Vgate vLinker MC+ is the one we test on).",
     steps: Object.freeze([
-      "Email us with the button below: your car's model and year, your adapter, and the Google account email you use on Google Play.",
-      // Channel-neutral on purpose (review 9/29): the Test session card is compiled into DEBUG builds only
-      // (app ui/DiagTab.kt, `if (BuildConfig.DEBUG)`), so a release bundle on a Play testing track does not
-      // have it. "The test build" is true for whichever build the owner sends until that is decided.
-      "We send you a link to an early test build. Install TrueMile EV from that link.",
-      "Record one test drive and one charge with the test build's Test session, then send us the file it makes.",
+      "Install TrueMile EV from Google Play, sign in and pick your car.",
+      "In the app, open Garage › Diag and tap Join the beta. Read the rules on that screen, then join.",
+      "Within 3 days, drive with a classic Bluetooth OBD-II adapter plugged in: at least 2 miles (3.2 km) and 10 minutes. The session file uploads by itself.",
+      "When your first session passes our check, Max turns on. The app starts a new session when one is due; a session has to pass at least every 30 days.",
     ]),
-    fileNote: "The file carries your car's VIN, its readings from the test, any trouble codes and that day's drive log. Send it only to our support address; we use it to build support for your model.",
+    fileNote: "When you join, you agree that each Test session file uploads automatically: your car's readings and trouble codes, its VIN, the session's drive log with its GPS track, the app's log for that day (with more detail when Diagnostics logging is on) and your notes. Our server checks each file automatically. We keep the files private, use them only to add support for your car's model, and delete them within 90 days after your car becomes supported or your beta ends, as our Privacy Policy says.",
     gets: Object.freeze([
-      // One item since 9/29: the "first owners of your model get Max for life" line went with that offer.
-      "Max while you test.",
+      "Max from your first Test session that passes our check, for as long as you keep testing.",
+      "3 more months of Max after your car becomes supported, as thanks.",
     ]),
-    cta: "Email us to join",
-    /** The sign-up email's body: a template the reader fills in (nothing about them is prefilled). */
-    body: [
-      "Hi TrueMile team,",
-      "",
-      "I'd like to join the beta.",
-      "",
-      "Car model and year: ",
-      "OBD-II adapter (make and model): ",
-      "Google account email I use on Google Play: ",
-      "",
-      "Thanks!",
-    ].join("\r\n"),     // RFC 6068: a mailto body's line breaks are CRLF (%0D%0A once encoded)
+    /** Where the join happens: in the app, never by email. */
+    join: "Then join in the app: Garage › Diag › Join the beta.",
+    cta: "Get TrueMile EV on Google Play",
   }),
 
   /** The web dashboard (app.html): what it offers, and how to get in. Every line rests on the dashboard's
@@ -161,13 +150,6 @@ export function guaranteeLine() {
 /** "Try every Max feature for 14 days." */
 export const trialLine = () => `Try every ${LAUNCH.trialTier} feature for ${LAUNCH.trialDays} days.`;
 
-/**
- * The beta sign-up mailto: link: the support address, the subject and the body template. Nothing about
- * the reader is prefilled; the blanks are theirs to fill in their own mail app.
- */
-export const betaMailto = () => `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(LAUNCH.betaSubject)}` +
-  `&body=${encodeURIComponent(LAUNCH.beta.body)}`;
-
 /** "Owners of a Ford Mustang Mach-E, Hyundai Ioniq 5, ... or Nissan Leaf, or of another EV, with a classic ..." */
 export function betaWho() {
   const m = LAUNCH.beta.models;
@@ -191,6 +173,7 @@ export function launchText() {
     betaWho: betaWho(),
     betaFileNote: LAUNCH.beta.fileNote,
     betaCta: LAUNCH.beta.cta,
+    betaJoin: LAUNCH.beta.join,
     dashTitle: LAUNCH.dashboard.title,
     dashWhat: LAUNCH.dashboard.what,
     dashSignIn: LAUNCH.dashboard.signIn,
@@ -216,21 +199,25 @@ export function planCards() {
     {
       // The app is sold as a paid app: Basic is where an account lands after the trial, not a price.
       key: "basic", name: LAUNCH.entryPlan, price: "After the trial",
-      blurb: "Every drive and charge is recorded and kept, on every plan.",
+      blurb: "Every drive and charge is recorded, kept and counted in your totals, on every plan.",
       items: [
         "Live dashboard, range and cost per mile",
-        "Your last 50 drives and last 10 charges on screen",
+        // Owner B1-B2 (10/11): a monthly quota for this month and last. The numbers are lib/gates.js
+        // BASIC_DRIVES_PER_MONTH and BASIC_DC_PER_MONTH (written out so the product page loads no gate
+        // code; web/tests/basic_quota_test.js checks they agree).
+        "This month and last on screen: the first 30 drives and 4 DC charges of each month, and every home and AC charge",
         "Route maps, the charger map and the trouble-code reader",
-        "One vehicle, and a download of your data at any time",
+        // B5: a simple report of what Basic sees; the full download is Pro and up.
+        "One vehicle, and a simple CSV of the drives and charges you see",
       ],
     },
     {
       key: "pro", name: "Pro", price: priceLine("pro"),
       blurb: "The detail behind every drive and charge.",
       items: [
-        "Full drive detail and drive categories",
+        "Drive detail and drive categories",
         "Money saved compared with gas",
-        "Widgets, formatted CSV and PDF reports",
+        "Widgets, formatted CSV, PDF reports and a download of all your data",
         "Restore your history on a new phone, towing mode",
         "Up to 2 vehicles and the last 6 months on screen",
       ],

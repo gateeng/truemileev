@@ -1,13 +1,18 @@
 // TrueMile EV web | lib/csv.js | pure: the Report CSV and the My-data CSV, byte for byte the app's
 // (Reportscreen.kt exportReport RS:2868-2995, exportMyData RS:2759-2859), plus the derived per-session
-// columns (TripRepository.kt:1650-1697). Numbers are formatted like Java's String.format("%.nf") in
+// columns (TripRepository.kt:1650-1697), and Basic's simple report (owner B5, 10/11: two small files of
+// exactly the drives and charges Basic sees). Numbers are formatted like Java's String.format("%.nf") in
 // Locale.US: the shortest decimal form of the double rounded HALF-UP, a negative sign kept on a value
-// that rounds to zero. Line endings "\n", UTF-8 without a BOM (the caller makes the Blob).
+// that rounds to zero. Line endings "\n", UTF-8 without a BOM (the caller makes the Blob; the simple
+// report's caller adds CSV_BOM, because its unknown cells are "—" and Excel reads UTF-8 only with it).
 import { dist, speed, eff, temp, labels } from "./units.js";
 import { dateFmt } from "./format.js";
-import { tripEff, isDc, carCell, classLabel } from "./rows.js";
+import { parts } from "./tz.js";
+import { tripEff, isDc, isHome, carCell, classLabel } from "./rows.js";
+import { parsePolyline } from "./route.js";
+import { parseGps } from "./stops.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 // ── Java-compatible "%.nf" ────────────────────────────────────────────────────────────────────
 function incDigits(s) {
@@ -310,4 +315,122 @@ export function myDataCsv(o) {
       `${kw},${esc(c.notes || "")},${edited},${source}\n`;
   }
   return { name, text: w };
+}
+
+// ── Basic's simple report (owner B5, 10/11) ───────────────────────────────────────────────────
+// Basic downloads exactly what it sees (gates.tripListWindow / chargeListWindow: the current and the
+// previous month's quota) as two small files with the owner's columns, nothing more: no trip type (the
+// business-mileage report's value), no cost per drive (Pro), no route. Pro and up keep the Report CSV and
+// My data above. A drive's start and end are its recorded route's first and last points (this page has
+// no place names: a lookup would send the position to a third party), written to three decimals (about
+// 110 m), the app's own fallback when it finds no name (SimpleReport.coordText); a charge's location is
+// its recorded position the same way, or "Home" for a home charge (home's position is never written out
+// here). The cells, the order and the file names follow the app's SimpleReport.kt, so one account's
+// two downloads read the same; the app names a point it can (a saved place, the phone's geocoder) where
+// this page writes the rounded position.
+
+/** The byte-order mark the simple report's files start with (Excel reads the "—" cells right with it). */
+export const CSV_BOM = "﻿";
+/** An unknown cell (a drive with no SoC reading, such as a GPS-only drive; no route; no position). */
+export const UNKNOWN = "—";
+
+/** The drives file's header (B5); [units] names the distance column. */
+export function simpleTripsHeader(units) {
+  return ["Day", "Start (Point A)", "End (Point B)", `Distance (${labels(units).dist})`, "Start SoC %", "End SoC %"];
+}
+/** The charges file's header (B5). */
+export const SIMPLE_CHARGES_HEADER = Object.freeze(["Day", "Location", "Network", "Rate ($/kWh)", "Delivered (kWh)", "Cost ($)"]);
+
+const validPoint = (p) => !!p && Number.isFinite(p.lat) && Number.isFinite(p.lng) &&
+  Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 && !(p.lat === 0 && p.lng === 0);
+/** "41.878, -87.630" (3 decimals, about 110 m: SimpleReport.coordText), or "—". */
+export function pointText(p) {
+  return validPoint(p) ? `${jfix(p.lat, 3)}, ${jfix(p.lng, 3)}` : UNKNOWN;
+}
+
+/** A recorded route's start and end as text ({a, b}; "—" each when the drive recorded no route). */
+export function routeEnds(polyline) {
+  const pts = parsePolyline(polyline || "").filter(validPoint);
+  return pts.length ? { a: pointText(pts[0]), b: pointText(pts[pts.length - 1]) } : { a: UNKNOWN, b: UNKNOWN };
+}
+
+/** A battery level, whole percent (SimpleReport.socCell); "—" when it was never read: 0 (a GPS-only
+ *  drive stores none) or a drive rebuilt from the odometer. */
+function socCell(v, neverRead) {
+  const x = Number(v);
+  return neverRead || !Number.isFinite(x) || x <= 0 ? UNKNOWN : jfix(Math.min(x, 100), 0);
+}
+/** A $/kWh rate: three decimals with one trailing zero dropped (0.43, 0.485; SimpleReport.rateCell). */
+function rateCell(v) {
+  const x = Number(v);
+  if (!Number.isFinite(x) || x <= 0) return UNKNOWN;
+  const s = jfix(x, 3);
+  return s.endsWith("0") ? s.slice(0, -1) : s;
+}
+const row = (cells) => cells.map(esc).join(",") + "\n";
+const dayOf = (ms, zone) => dateFmt(ms, "yyyy-MM-dd", zone);
+/** Row ids in a stable order: numeric ids by value, others as text. */
+function cmpRowId(a, b) {
+  const x = String(a ?? ""), y = String(b ?? "");
+  if (/^\d+$/.test(x) && /^\d+$/.test(y) && x.length !== y.length) return x.length - y.length;
+  return x < y ? -1 : x > y ? 1 : 0;
+}
+/** Oldest first (a log reads forward), then by id: the app's order. */
+const oldestFirst = (list) => (list || []).slice().sort((a, b) => (a.date - b.date) || cmpRowId(a.id, b.id));
+
+/**
+ * The file name, with the two months it covers (SimpleReport.fileName):
+ * "TrueMileEV_Drives_2026-09_2026-10.csv". [nowMs] = the quota's clock (gates.quotaNow).
+ */
+export function simpleFileName(kind, nowMs, zone) {
+  const p = parts(nowMs, zone);
+  const prev = p.mo === 1 ? { y: p.y - 1, mo: 12 } : { y: p.y, mo: p.mo - 1 };
+  const ym = (y, mo) => `${y}-${String(mo).padStart(2, "0")}`;
+  return `TrueMileEV_${kind}_${ym(prev.y, prev.mo)}_${ym(p.y, p.mo)}.csv`;
+}
+
+/**
+ * simpleTripsCsv({trips, routes, units, zone, todayMs}) -> {name, text} | null (no drive)
+ * [trips] = the drives Basic sees; [routes] = Map<tripId, polyline> (a missing one reads "—");
+ * [todayMs] = the quota's clock. Oldest first.
+ */
+export function simpleTripsCsv(o) {
+  const trips = o.trips || [];
+  if (!trips.length) return null;
+  const units = o.units || "imperial", zone = o.zone;
+  const routes = o.routes || new Map();
+  let w = row(simpleTripsHeader(units));
+  for (const t of oldestFirst(trips)) {
+    const ends = routeEnds(routes instanceof Map ? routes.get(t.id) : routes[t.id]);
+    const neverRead = !!t.isReconciled;
+    w += row([dayOf(t.date, zone), ends.a, ends.b, jfix(dist(t.miles || 0, units), 1),
+      socCell(t.startSocPct, neverRead), socCell(t.endSocPct, neverRead)]);
+  }
+  return { name: simpleFileName("Drives", o.todayMs, zone), text: w };
+}
+
+/** A charge's location cell: "Home" for a home charge, its recorded position, or "—". */
+export function chargeLocation(c) {
+  if (isHome(c)) return "Home";
+  return pointText(parseGps(c.gps));
+}
+
+/**
+ * simpleChargesCsv({charges, zone, todayMs}) -> {name, text} | null (no charge)
+ * [charges] = the charges Basic sees. Rate is the session's $/kWh ("—" when it was priced otherwise),
+ * Delivered what the charger metered and billed — the figure the charge's own page labels DELIVERED,
+ * on this page and in the app ("—" when nothing was metered), so Rate × Delivered (plus any session
+ * fee) is the Cost (owner 10/11) — and Cost what the session cost. Oldest first.
+ */
+export function simpleChargesCsv(o) {
+  const charges = o.charges || [];
+  if (!charges.length) return null;
+  const zone = o.zone;
+  let w = row(SIMPLE_CHARGES_HEADER);
+  for (const c of oldestFirst(charges)) {
+    w += row([dayOf(c.date, zone), chargeLocation(c), String(c.network || "").trim() || UNKNOWN,
+      rateCell(c.ratePerKwh), c.totalKwh > 0 ? jfix(c.totalKwh, 2) : UNKNOWN,
+      jfix(Number.isFinite(c.total) ? c.total : 0, 2)]);
+  }
+  return { name: simpleFileName("Charges", o.todayMs, zone), text: w };
 }

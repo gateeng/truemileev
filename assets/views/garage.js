@@ -11,7 +11,7 @@
 
 import * as api from "../lib/api.js";
 import { h, render, raw, iconHtml, lockNote } from "../lib/dom.js";
-import { allows, trailerLimit } from "../lib/gates.js";
+import { allows, trailerKeep } from "../lib/gates.js";
 import { dateFmt, fixed, money, grouped } from "../lib/format.js";
 import { dist, labels, eff as effUnits, pressure, psiFromKpa, isMetric } from "../lib/units.js";
 import { inScope, vehicleLabel, isHome, aggregateEff, isEnergyMeasured, tireOrder } from "../lib/rows.js";
@@ -25,7 +25,7 @@ import * as trips from "./trips.js";
 import * as chargesView from "./charges.js";
 import * as charts from "./charts.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 export const TABS = [
   { key: "vehicle", label: "Vehicle", icon: "directions_car" },
@@ -246,13 +246,12 @@ export function mount(el, ctx) {
       return;
     }
     const err = pieceError(g.trailers);
-    const limit = trailerLimit(tier);
     let trailersCard;
     if (err) trailersCard = card("Trailers", "rv_hookup", failed("The trailers", err));
     else {
       const list = g.trailers;
-      const shown = list.slice(0, limit === Infinity ? list.length : limit);
-      const more = list.length - shown.length;
+      // Pro shows one trailer: the one the app's plan choice keeps (owner D2), else the first.
+      const { shown, more } = trailerKeep(tier, list, acct.planChoice);
       const tTires = pieceError(g.tires) ? [] : g.tires.filter((t) => t.trailerId);
       trailersCard = card("Trailers", "rv_hookup", h`
         ${!list.length ? empty("rv_hookup", "No trailers saved yet. Add them in the app: Garage → Tow.") : h`<ul class="garage-trailers">${shown.map((t) => {

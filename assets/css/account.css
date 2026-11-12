@@ -25,8 +25,8 @@
 .account-trial .note{margin-top:6px}
 .account-h{font-size:.95rem;font-weight:600;margin:16px 0 8px}
 .account-compare{margin-bottom:14px}
-.account-compare td:first-child{white-space:normal;min-width:200px}
-.account-compare th:not(:first-child),.account-compare td:not(:first-child){text-align:center;width:22%}
+.account-compare td:first-child{white-space:normal;min-width:150px}
+.account-compare th:not(:first-child),.account-compare td:not(:first-child){text-align:center;width:19%;min-width:76px}
 .account-compare .account-cur{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .account-compare .account-price{font-weight:400;font-size:.78rem;white-space:normal;margin-top:2px;text-transform:none;letter-spacing:normal}
 .account-prices{margin:-6px 0 14px;max-width:70ch}
@@ -50,6 +50,8 @@
 .account-play{display:flex;flex-direction:column;gap:6px}
 .account-play p{margin:0}
 .account-dlg-btns{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;flex-wrap:wrap}
+.account-dlg-btns .btn[hidden]{display:none}
+.account-delete-msg .account-reauth-page{margin-top:4px}
 .account-dlg-msg .msg{margin:12px 0 0}
 .account-delete-dialog .btn.danger:not(:disabled){background:var(--alert);color:#fff}
 .account-delete-dialog .btn.danger:not(:disabled):hover{background:color-mix(in srgb,var(--alert) 85%,#000)}

@@ -4,18 +4,18 @@
 // type, car, short trips, towing, reconstructed, notes, distance, search), then cut to the tier's list
 // window. Also exports the row renderers the Journey and Garage pages reuse. Rows open #/map/trip/<id>.
 
-import { esc } from "../lib/dom.js";
+import { esc, quotaNoteHtml } from "../lib/dom.js";
 import { fixed, money, tripDuration, dateFmt } from "../lib/format.js";
 import { dist, speed, eff, temp, perDist, labels } from "../lib/units.js";
 import { parts, startOfDay } from "../lib/tz.js";
 import { customWindow, halfCustomWindow, periodWindow } from "../lib/periods.js";
-import { inScope, classLabel, classColor, tripEff, isShort, carCell, vehicleLabel } from "../lib/rows.js";
-import { allows, lockText, tripListWindow, listWindowNote } from "../lib/gates.js";
+import { inScope, classLabel, classColor, tripEff, isShort, carCell, vehicleLabel, carFilter } from "../lib/rows.js";
+import { allows, lockText, tripListWindow, listWindowNote, quotaApplies, quotaSummary, quotaNow, quotaLockedForList } from "../lib/gates.js";
 import { startEpochOf } from "../lib/tripdetail.js";
 import { applyTripFilter, SORT_KEYS } from "../lib/tripfilter.js";
 import { icon } from "../lib/icons.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** sessionStorage key of the Map section's last hash (the detail pages' back link). */
 export const TRIPS_QUERY_KEY = "tm.tripsQuery";
@@ -107,14 +107,18 @@ export function groupByDay(trips, nowMs, zone) {
   return groups;
 }
 
-/** RS:1819-1850: "{n} trip|trips · {dist} · {Σused} kWh · ${Σcost}". */
-export function daySummaryHtml(trips, units) {
+/**
+ * RS:1819-1850: "{n} trip|trips · {dist} · {Σused} kWh · ${Σcost}". A day's cost is the sum of its
+ * drives' costs, so it follows the rows' gate (costAnalytics, Pro): [costOk] false prints the lock,
+ * as the app's Report day headers do since 10/9. The section's cost tiles stay open (owner 10/9, D3).
+ */
+export function daySummaryHtml(trips, units, costOk = true) {
   const mi = trips.reduce((s, t) => s + t.miles, 0);
   const kwh = trips.reduce((s, t) => s + t.usedKwh, 0);
   const cost = trips.reduce((s, t) => s + t.cost, 0);
   const n = trips.length;
   return `${n} ${n === 1 ? "trip" : "trips"} · <b style="color:var(--m-distance)">${esc(distText(mi, units))}</b>` +
-    ` · <b style="color:var(--m-power)">${esc(fixed(kwh, 1))} kWh</b> · <b style="color:var(--m-cost)">${esc(money(cost))}</b>`;
+    ` · <b style="color:var(--m-power)">${esc(fixed(kwh, 1))} kWh</b> · <b style="color:var(--m-cost)">${esc(costOk ? money(cost) : "🔒")}</b>`;
 }
 
 export function dayGroupsHtml(groups, ctx, { link, costOk, names, openFirst = 14 }) {
@@ -122,7 +126,7 @@ export function dayGroupsHtml(groups, ctx, { link, costOk, names, openFirst = 14
   return groups.map((g, i) =>
     `<details class="trips-day"${i < openFirst ? " open" : ""}>` +
     `<summary><span class="trips-day-label">${esc(g.label)}</span>` +
-    `<span class="trips-day-sum">${daySummaryHtml(g.trips, ctx.units)}</span></summary>` +
+    `<span class="trips-day-sum">${daySummaryHtml(g.trips, ctx.units, costOk !== false)}</span></summary>` +
     g.trips.map((t) => tripRowHtml(t, ctx, { link, costOk, vehicleName: showVeh ? names.get(t.vehicleId) || "" : "" })).join("") +
     `</details>`).join("");
 }
@@ -232,10 +236,13 @@ export function mountTripList(el, ctx, { win = null, filter, onChange } = {}) {
   const typesOk = allows(tier, "tripTypes");
   const names = vehicleNames(ctx);
   const scopeTrips = ctx.account.trips.filter((t) => inScope(t, ctx.scope));
-  // The tier's list window is anchored on the scope's whole history (the entry tier's 50 newest are the
-  // globally newest, not the newest of a filtered view).
-  const windowIds = new Set(tripListWindow(tier, scopeTrips, { basis: scopeTrips, nowMs: ctx.now(), zone }).map((t) => t.id));
+  // The tier's list window is taken over the scope's whole history, never over a filtered view: Basic's
+  // first 30 drives of a month are that vehicle's first 30, whatever the filters show. One clock for the
+  // window and its summary: the browser's, floored by the server's (gates.quotaNow).
+  const qNow = quotaNow(tier, ctx.now());
+  const windowIds = new Set(tripListWindow(tier, scopeTrips, { basis: scopeTrips, nowMs: qNow, zone }).map((t) => t.id));
   const windowCut = windowIds.size < scopeTrips.length;
+  const basic = quotaApplies(tier);
   const st = { ...(filter || {}) };
   if (!SORT_KEYS.includes(st.sort)) st.sort = "date";
   let listWin = win;
@@ -275,18 +282,27 @@ export function mountTripList(el, ctx, { win = null, filter, onChange } = {}) {
   }
 
   function render() {
-    const { rows, listedCount, shortCount, cut } = applyTripFilter(scopeTrips, st, {
-      win: listWin, nowMs: ctx.now(), zone, notesByTrip: ctx.account.notesByTrip, typesAllowed: typesOk, windowIds,
+    const now = ctx.now();
+    const { rows, listedCount, shortCount, cut, locked } = applyTripFilter(scopeTrips, st, {
+      win: listWin, nowMs: now, zone, notesByTrip: ctx.account.notesByTrip, typesAllowed: typesOk, windowIds,
     });
     const sb = $(".trips-short-btn");
     sb.textContent = st.short ? "Hide short trips" : `Show short trips (${shortCount})`;
     sb.hidden = shortCount === 0 && !st.short;
-    const note = cut || (windowCut && !rows.length) ? listWindowNote(tier, "trips") : null;
+    // Basic (B4): one short summary of the drives past its monthly quota, shown when this list leaves
+    // something out; this month and last month are the WHOLE months (the scope's drives cut to the car
+    // chip, BasicQuota.lockedForList), so a week's list names the month's number. Pro: its 6-month note.
+    const summary = basic && locked.length
+      ? quotaSummary("trips", quotaLockedForList(carFilter(scopeTrips, st.car), locked, windowIds, qNow, zone), qNow, zone)
+      : null;
+    const note = !basic && (cut || (windowCut && !rows.length)) ? listWindowNote(tier, "trips") : null;
     let html = `<div class="trips-head">Trips (${listedCount})</div>`;
     if (!rows.length) {
-      html += `<p class="empty trips-empty">${listedCount > 0 && shortCount === listedCount && !st.short ? "Only short trips in this period."
-        : listedCount > 0 ? "These trips are older than your plan lists."
-          : "No trips in this period match these filters."}</p>`;
+      const empty = listedCount > 0 && shortCount === listedCount && !st.short ? "Only short trips in this period."
+        : summary ? ""
+          : listedCount > 0 ? "These trips are older than your plan lists."
+            : "No trips in this period match these filters.";
+      if (empty) html += `<p class="empty trips-empty">${empty}</p>`;
     } else if (st.view !== "table") {
       const groups = groupByDay(rows, ctx.now(), zone);
       html += dayGroupsHtml(groups.slice(0, daysShown), ctx, { link: detailOk, costOk, names });
@@ -318,6 +334,7 @@ export function mountTripList(el, ctx, { win = null, filter, onChange } = {}) {
         html += `<button type="button" class="btn trips-more" data-more="table">Show ${Math.min(TABLE_CHUNK, sorted.length - tableShown)} more</button>`;
       }
     }
+    if (summary) html += quotaNoteHtml(summary);
     if (note) html += `<p class="note">${esc(note)}</p>`;
     listEl.innerHTML = html;
   }

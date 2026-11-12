@@ -7,7 +7,7 @@
 
 import { parts } from "./tz.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** U+2212, the typographic minus the "vs avg" line uses. */
 export const MINUS = "−";

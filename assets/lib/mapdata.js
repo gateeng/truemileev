@@ -8,7 +8,7 @@
 
 import { speedToMiPerKwh } from "./route.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** The app's day and night styles. Always the style URL, never a dated tile URL (it changes weekly). */
 export const STYLE_URL = Object.freeze({

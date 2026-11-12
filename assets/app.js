@@ -7,7 +7,7 @@
 // Modules are loaded with import() so a stale file left in the browser cache (GitHub Pages caches
 // for up to ten minutes) shows one "Reload to finish" banner instead of a blank page.
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const LIB = ["api", "tz", "units", "format", "periods", "rows", "metrics", "compare", "gates", "board", "dom",
   "journeys", "stops", "route", "tripdetail", "curve", "svgchart", "series", "csv", "printmodel", "taxreport",
@@ -15,7 +15,7 @@ const LIB = ["api", "tz", "units", "format", "periods", "rows", "metrics", "comp
   "reportdesign", "launch", "recovery"];
 const VIEWS = ["tilegrid", "rangebar", "typefilter", "carfilter", "account", "garage", "settings", "financial",
   "charges", "charge", "charts", "map_section", "mapview", "trips", "trip", "journeys", "journey", "report",
-  "print"];
+  "print", "simplereport"];
 
 const STALE_TEXT = "The dashboard was just updated. Reload to finish.";
 
@@ -49,12 +49,15 @@ let api = null;
 let account = null;
 let scope = null;
 let options = [];      // the header's vehicle options
+let planLock = { locked: new Set(), limit: Infinity, overLimit: false };   // gates.planLocks (owner D2)
 let units = "imperial";
 let zone = "UTC";
 let handle = null;     // the mounted view's {unmount}
 let ctx = null;
 let quietHash = null;  // the hash setQuery just wrote (never re-mounts)
 let signedIn = false;
+let reopenDelete = false; // signed in again to delete (F24): Account opens its delete dialog once
+let shellWired = false;   // the sidebar's and scrim's own listeners are attached once per page load
 
 // ── modules and the BUILD check ───────────────────────────────────────────────────────────────
 
@@ -139,8 +142,12 @@ async function boot() {
   wireSignIn();
   if (back && back.error) signInError(back.error);
   if (api.sessionIsVolatile && api.sessionIsVolatile()) storageNote();
+  // A "sign in again to delete" is waiting (audit 9/30 F24): the sign-in page says why it is asking.
+  const reauthNote = () => {
+    if (!(back && back.error) && api.deleteReturn.pending()) signInError(V.account.reauthSignInNote("", ""), "info");
+  };
 
-  if (!api.auth.signedIn()) { showSignIn(); return; }
+  if (!api.auth.signedIn()) { showSignIn(); reauthNote(); return; }
   let me = null;
   try {
     me = await api.auth.whoAmI();
@@ -153,6 +160,8 @@ async function boot() {
     showSignIn();
     if (api.auth.endedForIdle && api.auth.endedForIdle()) {
       signInError(`You were signed out because this page was not used for ${api.IDLE_SIGN_OUT_HOURS} hours. Sign in again.`, "info");
+    } else {
+      reauthNote();
     }
     return;
   }
@@ -444,7 +453,15 @@ async function enter(me) {
   if (account.tier && account.tier.unknown) tierUnknownNote();
   if (!account.email && me && me.email) account.email = me.email;
 
+  // Signed in again to delete (F24), as the same account: Account, with its delete dialog open. The
+  // mark is consumed by any sign-in; another account never sees the dialog.
+  if (api.mode() !== "fixtures" && api.deleteReturn.take(account.userId || (me && me.id))) {
+    reopenDelete = true;
+    replaceHash("#/account");
+  }
+
   units = L.dom.store.get("tm.units", "imperial") === "metric" ? "metric" : "imperial";
+  planLock = L.gates.planLocks(account.tier, account.vehicles, account.planChoice);
   options = vehicleOptions();
   scope = options.length ? scopeFor(pickVehicle()) : { id: "all", vehicles: [], all: [] };
   buildSidebar();
@@ -469,9 +486,13 @@ function applyDemoTier() {
 
 // ── vehicles and scope ────────────────────────────────────────────────────────────────────────
 
-/** The header's vehicles: those with rows; every vehicle when none has any. */
+/**
+ * The header's vehicles: those with rows; every vehicle when none has any. A vehicle the plan does not
+ * include (the app's plan choice, owner D2) is never one of them: it is not picked, not in the Report's
+ * fleet and not printed. Settings still lists it, with its history counts and why it is locked.
+ */
 function vehicleOptions() {
-  const all = account.vehicles;
+  const all = account.vehicles.filter((v) => !planLock.locked.has(v.id));
   const withRows = all.filter((v) => v.tripCount + v.chargeCount > 0);
   return withRows.length ? withRows : all.slice();
 }
@@ -523,6 +544,10 @@ function buildSidebar() {
     L.dom.store.set("tm.sidebar", rail ? "rail" : "full");
     syncCollapse();
   });
+  // The sidebar element, the scrim and the media query outlive this function: their listeners go on
+  // once per page load (enter() runs again after a sign-in-again to delete, F24).
+  if (shellWired) return;
+  shellWired = true;
   sb.addEventListener("click", (e) => { if (e.target.closest("a.sb-item, a.sb-brand")) closeDrawer(false); });
   sb.addEventListener("keydown", onDrawerKey);
   $("scrim").addEventListener("click", () => closeDrawer(true));
@@ -757,18 +782,32 @@ function pick(path) {
   }
 }
 
+/**
+ * [row] when the plan shows it, else null: a drive or charge past Basic's monthly quota (owner B4) is not
+ * named in the topbar either (its page shows only why it is locked). Every other plan: [row] as is.
+ */
+function shownByPlan(row, kind) {
+  if (!row || !L.gates.quotaApplies(account.tier)) return row || null;
+  const mine = (kind === "charges" ? account.charges : account.trips).filter((x) => x.vehicleId === row.vehicleId);
+  const now = L.gates.quotaNow(account.tier, Date.now());       // floored by the server's clock
+  const seen = kind === "charges"
+    ? L.gates.basicChargeIds(mine, now, zone)
+    : L.gates.basicTripIds(mine, now, zone);
+  return seen.has(row.id) ? row : null;
+}
+
 /** The subtitle: a breadcrumb for a detail page, else the vehicle's name (or the fleet's size). */
 function subtitleFor(path, sect) {
   const [a, b, c] = path;
   const crumb = (label, href, rest) => `<a href="${href}">${escText(label)}</a> › ${escText(rest)}`;
   const dec = (s) => { try { return decodeURIComponent(s); } catch (_) { return s; } };
   if (a === "charge" && b) {
-    const ch = account.charges.find((x) => x.id === dec(b));
+    const ch = shownByPlan(account.charges.find((x) => x.id === dec(b)), "charges");
     const rest = ch ? `${L.format.dateFmt(ch.date, "MMM d", zone)} · ${ch.network.trim() || "Charge"}` : "Session";
     return crumb("Charge", "#/charge", rest);
   }
   if (a === "map" && b === "trip" && c) {
-    const t = account.trips.find((x) => x.id === dec(c));
+    const t = shownByPlan(account.trips.find((x) => x.id === dec(c)), "trips");
     return crumb("Map", "#/map?tab=trips", t ? L.format.dateFmt(t.date, "MMM d · h:mm a", zone) : "Trip");
   }
   if (a === "map" && b === "journey" && c) {
@@ -896,6 +935,7 @@ function mountCurrent() {
     section,
     theme: L.theme.currentTheme(),
     vehicles: options.slice(),
+    planLocks: planLock,
     scopeFor,
     setUnits,
     setTheme,
@@ -907,7 +947,12 @@ function mountCurrent() {
     setSubtitle(text) { const sub = $("tbSub"); if (sub) sub.textContent = String(text ?? ""); },
     /** Account → Delete succeeded: the whole shell gives way to the done card. */
     accountDeleted,
+    /** Account → Delete asked for a fresh sign-in (F24): sign this tab out, then come back to it. */
+    signInAgainToDelete,
+    /** Account opens its delete dialog once, back from that sign-in. */
+    openDelete: section === "account" && reopenDelete,
   };
+  reopenDelete = false;
 
   // No vehicle yet: Account and Settings still work; every other section says where vehicles come from.
   if (!account.vehicles.length && section !== "account" && section !== "settings") {
@@ -929,6 +974,46 @@ function mountCurrent() {
   } catch (e) {
     pageError(el, e);
   }
+}
+
+/**
+ * Account -> Delete account answered "sign in again first" (audit 9/30 F24; nothing was deleted). This
+ * tab is signed out (on the server too, this browser's session only), the shell gives way to the sign-in
+ * page with a note saying why, and the return is marked in this tab: once the same account signs in
+ * (email, Google or a password reset), enter() lands on Account with the delete dialog open. No reload,
+ * so a browser that blocks site storage keeps the mark for this page load as well.
+ * [provider] "google" | "email"; [email] the account's address (prefilled for an email sign-in).
+ */
+async function signInAgainToDelete({ provider = "", email = "" } = {}) {
+  const uid = account && account.userId;
+  if (handle && typeof handle.unmount === "function") { try { handle.unmount(); } catch (_) { /* going */ } }
+  handle = null;
+  signedIn = false;
+  window.removeEventListener("hashchange", onHashChange);
+  closeDrawer(false);
+  show($("sidebar"), false);
+  $("shell").classList.remove("with-nav", "rail");
+  $("tbLeft").innerHTML = `<a class="tb-brand" href="index.html">TrueMile <b>EV</b></a>`;
+  buildTopbarSignedOut();
+  const view = $("view");
+  view.innerHTML = "";
+  await api.auth.signOut().catch(() => {});
+  api.clearLocalSession();
+  account = null;
+  scope = null;
+  options = [];
+  planLock = { locked: new Set(), limit: Infinity, overLimit: false };
+  // After the sign-out: a sign-out clears any earlier mark.
+  api.deleteReturn.mark(uid);
+  try { history.replaceState(null, "", location.pathname + location.search + "#/account"); } catch (_) { /* no history */ }
+  document.title = "TrueMile EV — your dashboard";
+  showSignIn();
+  $("password").value = "";
+  if (provider === "email" && email) {
+    $("email").value = email;
+    try { $("password").focus(); } catch (_) { /* no focus */ }
+  }
+  signInError(V.account.reauthSignInNote(provider, email), "info");
 }
 
 /**
@@ -959,6 +1044,7 @@ function accountDeleted() {
     `under a coded identifier, never your account; they expire within 14 days), crash reports (a random install ID only; ` +
     `deleted after 90 days), our database host's request logs (IP address and web address, which can include the VIN; ` +
     `up to 7 days), a one-way code for up to 90 days so the introductory period can't be restarted, ` +
+    `the sign-in security log (IP address, email address and name) for up to 90 days, ` +
     `the deleted account's ID for 35 days, and backups for up to 7 days.</p>` +
     `<p><a class="btn primary" href="index.html">Go to the TrueMile EV page</a></p></div>`;
   show(view, true);

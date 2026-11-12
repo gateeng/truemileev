@@ -3,13 +3,13 @@
 // where it happened (never printed; Home only when the viewer turned Home pins on). Read-only: none of
 // the app's edit, merge or confirm actions exist here.
 
-import { esc } from "../lib/dom.js";
+import { esc, quotaNoteHtml } from "../lib/dom.js";
 import { icon } from "../lib/icons.js";
 import * as api from "../lib/api.js";
 import { lineChart } from "../lib/svgchart.js";
 import { fixed, money, hm, dateFmt } from "../lib/format.js";
 import { dist, temp, labels } from "../lib/units.js";
-import { allows, lockText } from "../lib/gates.js";
+import { allows, lockText, quotaApplies, chargeListWindow, quotaRowText, quotaNow } from "../lib/gates.js";
 import { mergeNote, parseGps } from "../lib/stops.js";
 import { curveWindow, dedupe, sessionSeries } from "../lib/curve.js";
 import { vehicleLabel, isHome } from "../lib/rows.js";
@@ -17,7 +17,7 @@ import { pointFeatures } from "../lib/mapdata.js";
 import { unconfirmedChip, backToChargesHref, homePinsOn } from "./charges.js";
 import { mountMap } from "./mapview.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 const UNCONFIRMED_TEXT = "Start mileage or arrival charge was left as suggested and never confirmed. It counts in totals, not in averages.";
 
@@ -88,6 +88,16 @@ export function mount(el, ctx) {
     return {};
   }
   const u = ctx.units, L = labels(u), zone = ctx.tz;
+  // Basic (B4): a charge past its monthly quota cannot be opened (an old link or a bookmark lands here).
+  if (quotaApplies(ctx.tier)) {
+    const now = quotaNow(ctx.tier, ctx.now());
+    const seen = chargeListWindow(ctx.tier, acc.charges.filter((o) => o.vehicleId === c.vehicleId), { nowMs: now, zone });
+    if (!seen.some((o) => o.id === c.id)) {
+      el.innerHTML = `<section class="charges-view"><p class="charges-back"><a href="${esc(back)}">${icon("chevron_left", { size: 18 })} Charge</a></p>` +
+        quotaNoteHtml(quotaRowText("charges", c.date, now, zone)) + `</section>`;
+      return {};
+    }
+  }
   const vehicle = acc.vehicles.find((v) => v.id === c.vehicleId) || null;
   const pack = vehicle && vehicle.packKwh > 0 ? vehicle.packKwh : 131;
   const allV = (ctx.scope && ctx.scope.all) || acc.vehicles || [];

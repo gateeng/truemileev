@@ -9,9 +9,10 @@ import { vehicleLabel } from "../lib/rows.js";
 import { money } from "../lib/format.js";
 import { LABELS as RANGE_LABELS, DEFAULT_RANGE } from "../lib/periods.js";
 import { currentPref } from "../lib/theme.js";
+import { allows } from "../lib/gates.js";
 import * as api from "../lib/api.js";
 
-export const BUILD = "2026-10-01.1";
+export const BUILD = "2026-11-12.2";
 
 /** The periods a section may open on (Custom needs dates, so it is not a default). */
 export const DEFAULT_RANGES = ["day", "week", "month", "year", "ytd", "all"];
@@ -50,6 +51,12 @@ export function mount(el, ctx) {
   const homeOnMap = store.get("tm.chargemap.home", "0") === "1";
   const fuel = acct.fuel || {};
   const canPick = opts.length > 1;
+  // The app's plan choice (owner D2): a vehicle the plan does not include keeps its history (its counts
+  // stay listed here) but is not offered anywhere on the page; the choice itself is made in the app.
+  const locks = ctx.planLocks && ctx.planLocks.locked instanceof Set ? ctx.planLocks : { locked: new Set(), limit: Infinity };
+  const lockedNote = locks.locked.size
+    ? `Your plan includes ${locks.limit} ${locks.limit === 1 ? "vehicle" : "vehicles"}. The others keep their history and come back when you upgrade. Choose which to keep in the app: Settings › Vehicle.`
+    : "";
 
   render(el, h`
     <div class="settings">
@@ -64,12 +71,15 @@ export function mount(el, ctx) {
               </select>` : h`<span class="settings-val">${name(opts[0])}</span>`)}
           <ul class="settings-list">
             ${all.map((v) => h`<li>
-              ${opts.some((o) => o.id === v.id)
+              ${locks.locked.has(v.id)
+                ? h`<span class="settings-vstatic settings-vlocked">${raw(iconHtml("lock", { size: 18 }))}<span class="settings-vname">${name(v)}</span><span class="settings-vlock">Not on your current plan</span></span>`
+                : opts.some((o) => o.id === v.id)
                 ? h`<a href="#/garage" data-garage="${v.id}">${raw(iconHtml("directions_car", { size: 18 }))}<span class="settings-vname">${name(v)}</span></a>`
                 : h`<span class="settings-vstatic">${raw(iconHtml("directions_car", { size: 18 }))}<span class="settings-vname">${name(v)}</span></span>`}
               <span class="settings-vcount">${v.tripCount} ${v.tripCount === 1 ? "drive" : "drives"} · ${v.chargeCount} ${v.chargeCount === 1 ? "charge" : "charges"}</span>
             </li>`)}
-          </ul>` : h`<p class="note">No vehicle yet. Vehicles are added in the app.</p>`}
+          </ul>
+          ${lockedNote ? h`<p class="note settings-locknote">${lockedNote}</p>` : ""}` : h`<p class="note">No vehicle yet. Vehicles are added in the app.</p>`}
       </section>
 
       <section class="card settings-sec" aria-labelledby="set-units">
@@ -112,7 +122,9 @@ export function mount(el, ctx) {
 
       <section class="card settings-sec" aria-labelledby="set-data">
         <div class="card-head"><h2 class="card-title" id="set-data">Data</h2></div>
-        ${row("download", "My data (CSV)", "Every trip and charge you've logged, from Account.",
+        ${row("download", "My data (CSV)", allows(ctx.tier, "myData")
+          ? "Every trip and charge you've logged, from Account."
+          : "A simple report of this month's and last month's drives and charges, from Account.",
           h`<a class="btn ghost sm" href="#/account">Open Account</a>`)}
         ${row("delete_forever", "Clear this browser's dashboard settings", "Units, theme, tiles, report design, memberships and every other choice made on this page. You stay signed in.",
           h`<button type="button" class="btn ghost sm" data-act="clear">Clear</button>`)}
